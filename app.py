@@ -19,6 +19,16 @@ st.set_page_config(page_title="HD System Spec", page_icon="💻", layout="wide")
 st.title("💻 【SYSTEM SPECIFICATION REPORT】")
 st.markdown("生体システムのハードウェア仕様＆OS特性を解析します。")
 
+# ▼▼▼ ここから下のブロックを追加！ ▼▼▼
+st.markdown("""
+<style>
+pre {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # =====================================================================
 # ▼▼▼ サイドバー: 入力インターフェース ▼▼▼
 # =====================================================================
