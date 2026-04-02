@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD完全自作エンジン Webアプリ版 (カラー出力＆スマホ折り返し対応)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.1 カスタマイズ＆UI最適化版)
 # =====================================================================
 import streamlit as st
 import io
@@ -10,14 +10,49 @@ import collections
 import os
 import urllib.request
 
-# ページ設定
+# =====================================================================
+# ▼▼▼ 1. UI・デザインのカスタマイズ設定 ▼▼▼
+# （文字の大きさや区切り線は、ここを変更するだけで一括で変わります）
+# =====================================================================
+# Streamlitのページ設定
 st.set_page_config(page_title="HD System Spec", page_icon="💻", layout="wide")
 
-st.title("💻 【SYSTEM SPECIFICATION REPORT】")
-st.markdown("生体システムのハードウェア仕様＆OS特性を解析します。")
+# 区切り線のデザイン（圧を減らしてスッキリと）
+DIVIDER = "-" * 35 
+
+# 天体の表示順と日本語名
+PLANET_ORDER = [
+    "Sun", "Earth", "Moon", "NorthNode", "SouthNode", 
+    "Mercury", "Venus", "Mars", "Jupiter", "Saturn", 
+    "Uranus", "Neptune", "Pluto", "Chiron"
+]
+
+PLANET_JP = {
+    "Sun": "太陽", "Earth": "地球", "Moon": "月", 
+    "NorthNode": "ノースノード", "SouthNode": "サウスノード",
+    "Mercury": "水星", "Venus": "金星", "Mars": "火星", 
+    "Jupiter": "木星", "Saturn": "土星", "Uranus": "天王星", 
+    "Neptune": "海王星", "Pluto": "冥王星", "Chiron": "キロン"
+}
 
 # =====================================================================
-# ▼▼▼ サイドバー: 入力インターフェース ▼▼▼
+# ▼▼▼ スマホの画面で自動折り返しさせるための魔法 ▼▼▼
+# =====================================================================
+st.markdown("""
+<style>
+pre {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# 圧を抑えた小さめのタイトル
+st.markdown("### 💻 SYSTEM SPECIFICATION REPORT")
+st.markdown("<span style='font-size: 0.9em; color: gray;'>生体システムのハードウェア仕様＆OS特性を解析します。</span>", unsafe_allow_html=True)
+
+# =====================================================================
+# ▼▼▼ 2. サイドバー: 入力インターフェース ▼▼▼
 # =====================================================================
 st.sidebar.header("▼ 誕生日情報の入力 (JST)")
 
@@ -33,7 +68,7 @@ MONTH = input_date.month
 DAY = input_date.day
 
 # =====================================================================
-# ▼▼▼ 計算エンジン設定 ▼▼▼
+# ▼▼▼ 3. 計算エンジン・スコア設定 ▼▼▼
 # =====================================================================
 CUSTOM_WEIGHTS = {
     "Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, 
@@ -43,6 +78,7 @@ CUSTOM_WEIGHTS = {
 DORMANT_MULTIPLIER = 0.3 
 FORCED_GATES = set()
 
+# --- 天文暦データのセットアップ ---
 ephe_dir = './ephe_data'
 os.makedirs(ephe_dir, exist_ok=True)
 files = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']
@@ -52,6 +88,7 @@ for f in files:
         urllib.request.urlretrieve(base_url+f, os.path.join(ephe_dir, f))
 swe.set_ephe_path(ephe_dir)
 
+# --- HDマスターデータ ---
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
 CENTER_GATES = {"Head": {64, 61, 63}, "Ajna": {47, 24, 4, 17, 43, 11}, "Throat": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "G": {7, 1, 13, 25, 46, 2, 15, 10}, "Heart": {21, 51, 26, 40}, "Sacral": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "Splenic": {48, 57, 44, 50, 32, 28, 18}, "SolarPlexus": {36, 22, 37, 6, 49, 55, 30}, "Root": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
 MOTOR_CENTERS = {"Sacral", "Heart", "SolarPlexus", "Root"}
@@ -85,6 +122,9 @@ CROSS_NAMES = {
     61:("Maya","Thinking","Obscuration"), 62:("Maya","Detail","Obscuration"), 63:("Consciousness","Doubts","Dominion"), 64:("Consciousness","Confusion","Dominion")
 }
 
+# =====================================================================
+# ▼▼▼ 4. 計算・出力ロジック ▼▼▼
+# =====================================================================
 def get_gate_and_line(lon):
     offset = (lon - 302.0 + 360.0) % 360.0
     return GATE_SEQUENCE[int(offset/5.625)], int((offset%5.625)/(5.625/6))+1
@@ -117,7 +157,7 @@ def get_chart_data(y, m, d, h, mi):
 def print_master_report(data, jd_d, y, m, d, h, mi):
     dv = swe.revjul(jd_d)
     dj = datetime.datetime(int(dv[0]), int(dv[1]), int(dv[2]), int(dv[3]), int((dv[3]%1)*60)) + datetime.timedelta(hours=9)
-    print(f"【P(黒)】{y}/{m}/{d} {h:02d}:{mi:02d} / <span style='color:#FF4B4B; font-weight:bold;'>【D(赤)】{dj.strftime('%Y/%m/%d %H:%M')} (JST)</span>\n")
+    print(f"黒(Pers): {y}/{m}/{d} {h:02d}:{mi:02d}\n<span style='color:#FF4B4B; font-weight:bold;'>赤(Design): {dj.strftime('%Y/%m/%d %H:%M')} (JST)</span>\n")
 
     core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
     
@@ -158,10 +198,10 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     on_c = initial_on_c 
 
     if len(initial_islands) == 0: definition_type = "Reflector (None)"
-    elif len(initial_islands) == 1: definition_type = "Single Definition (シングル定義)"
-    elif len(initial_islands) == 2: definition_type = "Split Definition (スプリット定義)"
-    elif len(initial_islands) == 3: definition_type = "Triple Split Definition (トリプルスプリット定義)"
-    else: definition_type = "Quadruple Split Definition (クアドラプルスプリット定義)"
+    elif len(initial_islands) == 1: definition_type = "Single Definition"
+    elif len(initial_islands) == 2: definition_type = "Split Definition"
+    elif len(initial_islands) == 3: definition_type = "Triple Split Definition"
+    else: definition_type = "Quadruple Split Definition"
 
     b_gates_1 = []
     b_gates_2 = []
@@ -224,138 +264,113 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
-    print(f"=== 🔋 自発エネルギー密度(質量): {raw_s:.1f} / 100 ===")
+    print(DIVIDER)
+    print(f"🔋 自発エネルギー密度: {raw_s:.1f} / 100")
     if connected_motors:
         motors_jp = "・".join([CENTER_JP.get(m, m) for m in connected_motors])
-        print(f"  💡 【具現化の原動力】喉センターに連動しているモーター: {motors_jp} センター")
-        print(f"     質量スコアが控えめな場合でも、この「{motors_jp}」のパワフルなエネルギーが")
-        print(f"     生きる推進力として働き、現実世界で力強く能力を発揮していくデザインです。")
+        print(f"💡 喉に連動するモーター: {motors_jp}")
+    print(DIVIDER)
 
-    # ▼ ここから文字に色をつける魔法（HTMLタグ）を注入 ▼
-    print(f"\n{'天体名':<10} | <span style='color:#FF4B4B; font-weight:bold;'>{'赤 (Design)':^12}</span> | {'黒 (Pers)' :^15}")
-    print("-" * 55)
-    for p in ["Sun", "Earth", "NorthNode", "SouthNode", "Moon", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron"]:
+    # ▼ 天体リストの出力（順番と改行デザインの反映） ▼
+    for p in PLANET_ORDER:
         r = next((x for x in data if x["planet"]==p and x["color"]=="Red"), None)
         b = next((x for x in data if x["planet"]==p and x["color"]=="Black"), None)
         if r and b:
             rs = calc_gate_score(r["gate"], p) if p != "Chiron" else 0.0
             bs = calc_gate_score(b["gate"], p) if p != "Chiron" else 0.0
             
-            r_part = f"{r['gate']:>2}.{r['line']} " + (f"[{rs:>4.1f}]" if rs>0 else "      ")
-            b_part = f"{b['gate']:>2}.{b['line']} " + (f"[{bs:>4.1f}]" if bs>0 else "      ")
+            # スコアが0なら空白、あれば数値を表示
+            r_sc = f" [{rs:>4.1f}]" if rs>0 else ""
+            b_sc = f" [{bs:>4.1f}]" if bs>0 else ""
             
-            # 赤い方の結果を <span> タグで囲んで色をつけます
-            print(f"{p:<10} | <span style='color:#FF4B4B;'>{r_part:^12}</span> | {b_part:^15}")
+            p_jp = PLANET_JP.get(p, p)
             
-    print("\n=== 🏢 センター別 実装モジュール＆質量小計 ===")
+            print(f"{p_jp}")
+            print(f"<span style='color:#FF4B4B;'>赤 {r['gate']:>2}.{r['line']}{r_sc}</span> ║ 黒 {b['gate']:>2}.{b['line']}{b_sc}\n")
+            
+    print(DIVIDER)
+    print("🏢 センター別 実装モジュール")
+    print(DIVIDER)
     center_order = ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Splenic", "SolarPlexus", "Root"]
     for c in center_order:
         c_gates = []
         c_score = 0.0
-        status = "定義済み (Active)" if c in on_c else "未定義 (Dormant)"
+        status = "定義済み" if c in on_c else "未定義"
         for x in data:
             if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c]:
                 s = calc_gate_score(x["gate"], x["planet"])
                 c_score += s
                 c_gates.append((x["gate"], x["line"], x["planet"], x["color"], s))
+                
         display_center = CENTER_JP.get(c, c)
-        print(f"\n■ {display_center} 領域 [{status}]  【小計: {c_score:.1f}】")
+        
+        # センターの表示デザイン反映
+        print(f"■ {display_center}")
+        print(f"{status} [小計: {c_score:.1f}]")
+        
         if not c_gates:
-            print("    - 該当ゲートなし (完全なクラウド領域)")
+            print("ー 該当なし\n")
         else:
             c_gates_sorted = sorted(c_gates, key=lambda x: x[0])
             for g, line, p, col, s in c_gates_sorted:
-                score_str = f"[{s:>4.1f}]" if s > 0 else "      "
-                # センター小計の方も、赤（Design）なら色をつける
+                score_str = f" [{s:>4.1f}]" if s > 0 else ""
+                p_jp = PLANET_JP.get(p, p)
+                
                 if col == "Red":
-                    print(f"    - <span style='color:#FF4B4B;'>Gate {g:>2}.{line} ({p:<10} / 赤) {score_str}</span>")
+                    print(f"ー <span style='color:#FF4B4B;'>Gate {g:>2}.{line} ({p_jp}/赤){score_str}</span>")
                 else:
-                    print(f"    - Gate {g:>2}.{line} ({p:<10} / 黒) {score_str}")
+                    print(f"ー Gate {g:>2}.{line} ({p_jp}/黒){score_str}")
+            print("") # ブロック終わりの空行
         
-    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
+    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, islands
 
 TECH_TYPE_STRENGTHS = {
-    "Generator": "持続可能なメインエンジン稼働。\n    反復タスクによるシステム最適化と、\n    外部トリガーに対する高いレスポンス性能。",
-    "Manifesting Generator": "マルチスレッド処理による高速展開。\n    プロセスをスキップし最適解を見つける\n    アジャイル開発的な機動力。",
-    "Manifestor": "システム起動のイニシアチブ（実行権限）。\n    ゼロからの要件定義と、\n    他リソースを稼働させるAPIトリガー発火。",
-    "Projector": "システム全体のアーキテクチャ俯瞰。\n    リソースの効率的なアロケーションと、\n    他プロセスのデバッグ・チューニング。",
-    "Reflector": "環境データ全体のサンプリング。\n    システムの健全性モニタリングと、\n    バイアスなしのフラットな評価。"
+    "Generator": "持続可能なメインエンジン稼働。\n反復タスクによるシステム最適化と、外部トリガーに対する高いレスポンス性能。",
+    "Manifesting Generator": "マルチスレッド処理による高速展開。\nプロセスをスキップし最適解を見つけるアジャイル開発的な機動力。",
+    "Manifestor": "システム起動のイニシアチブ（実行権限）。\nゼロからの要件定義と、他リソースを稼働させるAPIトリガー発火。",
+    "Projector": "システム全体のアーキテクチャ俯瞰。\nリソースの効率的なアロケーションと、他プロセスのデバッグ・チューニング。",
+    "Reflector": "環境データ全体のサンプリング。\nシステムの健全性モニタリングと、バイアスなしのフラットな評価。"
 }
 TECH_CENTER_STRENGTHS = {
-    "Head": "新規クエリの発行（インスピレーション・着想の受信と処理）", "Ajna": "データ解析・モデリング（概念の論理的構築と情報処理）",
-    "Throat": "外部システムへのデプロイ（アイデアの具現化・表現）", "G": "一貫したルーティングとディレクトリ管理（方向性とアイデンティティ）",
-    "Heart": "リソースの確約とトランザクション完了（目標へのコミットと意志力）", "Sacral": "高可用性のベースエンジン（持続可能なエネルギー供給）",
-    "Splenic": "リアルタイムのセキュリティ検知（直感的なリスクアセスメント）", "SolarPlexus": "感情波データ収集によるディープラーニング（深い洞察）",
-    "Root": "デッドライン処理とバッチ実行（タスク完了へ向かうアドレナリン圧力）"
+    "Head": "新規クエリ発行", "Ajna": "データ解析・モデリング",
+    "Throat": "外部システムへのデプロイ", "G": "一貫したルーティング",
+    "Heart": "リソースの確約とトランザクション", "Sacral": "高可用性のベースエンジン",
+    "Splenic": "リアルタイムのセキュリティ検知", "SolarPlexus": "ディープラーニング",
+    "Root": "バッチ実行と圧力"
 }
 TECH_LINE_MEANINGS = {
-    1: "基盤検証・インフラ構築 (調査と究明)", 2: "独自アルゴリズム (天性のブラックボックス)", 3: "アジャイル・テスト (トライ＆エラー)",
-    4: "ネットワーク・API連携 (人脈と影響)", 5: "ソリューション提供・デプロイ (汎用化と解決)", 6: "システム監査・モデリング (俯瞰と管理者視点)"
-}
-NOT_SELF_TALK_TECH = {
-    "Head": "不要なクエリ（どうでもいい疑問）まで処理しようとCPUを浪費していませんか？",
-    "Ajna": "自説の正しさを証明しようと無限ループ（確信の固執）に陥っていませんか？",
-    "Throat": "沈黙エラーを恐れて、無駄なログ（おしゃべりやアピール）を吐き出しすぎていませんか？",
-    "G": "外部ディレクトリに自分のルートパス（愛やアイデンティティ）を探していませんか？",
-    "Heart": "承認欲求からリソース上限を超えるコミット（無理な約束）をしていませんか？",
-    "Sacral": "シャットダウンのタイミングを見失い、オーバーヒートするまで稼働していませんか？",
-    "Splenic": "レガシーシステム（不要な関係や環境）に依存してアンインストールを渋っていませんか？",
-    "SolarPlexus": "コンフリクト（波風）を避けるため、エラーを握りつぶして『いい人プロセス』を偽装していませんか？",
-    "Root": "タスクキューを無理やり空にしようと、不当なプレッシャーで焦って処理していませんか？"
+    1: "基盤検証・インフラ構築", 2: "独自アルゴリズム", 3: "アジャイル・テスト",
+    4: "ネットワーク・API連携", 5: "ソリューション提供", 6: "システム監査・モデリング"
 }
 
 def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_1, b_gates_2, islands):
-    print("\n" + "="*50)
-    print("💻 【SYSTEM SPECIFICATION REPORT】個人ハードウェア＆OS仕様書 💻")
-    print("="*50)
+    print(DIVIDER)
+    print("💻 SYSTEM SPECIFICATION REPORT")
+    print("   個人ハードウェア＆OS仕様書")
+    print(DIVIDER)
     
-    print(f"\n[OS特性（タイプ）]: {type_str}")
+    print(f"\n[OS特性]: {type_str}")
     print(f" └ 強み: {TECH_TYPE_STRENGTHS.get(type_str, '未定義')}")
     
-    print("\n[アクティブなハードウェアモジュール（定義済みセンター）]")
-    if not on_centers: print(" └ すべてのモジュールが柔軟なクラウド処理（フルオープン）として機能します。")
+    print("\n[アクティブなハードウェアモジュール]")
+    if not on_centers: print(" └ すべてのモジュールがクラウド処理として機能。")
     for center in on_centers:
         print(f" └ {CENTER_JP.get(center, center)}: {TECH_CENTER_STRENGTHS.get(center, '')}")
     
-    print("\n=== 🧩 システム統合パッチ (ミッシングゲート解析) ===")
-    print(f"現在のネットワーク構成: {def_type}")
+    print("\n[システム統合パッチ (ミッシングゲート)]")
+    print(f"構成: {def_type}")
     
     if len(islands) <= 1:
-        print("🌟 スプリットを繋ぐブリッジゲート: なし (既に全システムが単一ネットワークに統合されています)")
+        print("🌟 ブリッジ: なし (単一ネットワーク統合済み)")
     else:
         if b_gates_1:
             bg_list = sorted(list(set(b_gates_1)))
-            print(f"🌟 【重要】システムを統合するブリッジゲート: {bg_list}")
-            print("   (※このゲートのいずれかを持つユーザーとAPI連携するか、星のトランジットでパッチが")
-            print("      配信されると、分断されたシステムが統合されます)")
-            print("\n   [予測される化学反応（システム統合による能力ブースト）]")
+            print(f"🌟 統合ブリッジ: {bg_list}")
             for g in bg_list:
-                conn_centers = set()
-                for r, cs in CHANNELS.items():
-                    c1, c2 = r.split('_')
-                    for g1, g2, cid in cs:
-                        if (g1 in gates or g1 == g) and (g2 in gates or g2 == g):
-                            if g1 == g or g2 == g:
-                                conn_centers.update([c1, c2])
-                
-                reaction = "システム間の通信ロスが消滅し、情報とエネルギーの伝達がシームレスになります。"
-                has_motor = any(c in MOTOR_CENTERS for c in conn_centers)
-                has_throat = "Throat" in conn_centers
-                
-                if has_motor and has_throat:
-                    reaction = "モーターと喉（出力ポート）が直結。具現化のトランザクションが爆発的に向上し、思いつきを即座に形にするマニフェスト力が発動します。"
-                elif sum(1 for c in conn_centers if c in MOTOR_CENTERS) >= 2:
-                    reaction = "モーター同士が同期・直結。システム全体のエネルギー出力とスタミナが劇的に強化され、圧倒的な推進力が生まれます。"
-                print(f"    - Gate {g:>2} 接続時: {reaction}")
-                
+                print(f"  - Gate {g:>2} 接続時: 通信ロス消滅、シームレス化。")
         elif b_gates_2:
-            print(f"🌟 【重要】ワイド・スプリットを統合するブリッジゲートの組み合わせ:")
-            combo_strs = []
-            for bg1, bg2 in b_gates_2:
-                combo_strs.append(f"[{bg1}, {bg2}]")
-            print(f"   {', '.join(combo_strs)}")
-            print("   (※このスプリットは広く、ネットワーク統合には上記のゲートペアが同時に必要です。")
-            print("      必要な全モジュールが揃うことで、強大なシステム統合反応が起きます)")
+            combo_strs = [f"[{bg1}, {bg2}]" for bg1, bg2 in b_gates_2]
+            print(f"🌟 ワイド統合ブリッジ:\n   {', '.join(combo_strs)}")
 
     red_counts = {i: 0 for i in range(1, 7)}
     black_counts = {i: 0 for i in range(1, 7)}
@@ -364,75 +379,34 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
             if d["color"] == "Red": red_counts[d["line"]] += 1
             else: black_counts[d["line"]] += 1
             
-    print("\n=== 📊 レイヤー別実装割合 (ラインの構成数) ===")
-    print("レイヤー(Line) | <span style='color:#FF4B4B;'> 赤 </span> |  黒  | 合計 | 役割メタファー")
-    print("-" * 55)
+    print("\n[レイヤー別実装割合 (ラインの構成数)]")
+    print("Line | <span style='color:#FF4B4B;'>赤</span> | 黒 | 計 | 役割メタファー")
+    print("-" * 35)
     for i in range(1, 7):
         tot = red_counts[i] + black_counts[i]
-        print(f" Line {i:<8} | <span style='color:#FF4B4B;'> {red_counts[i]:>2} </span> |  {black_counts[i]:>2}  |  {tot:>2}  | {TECH_LINE_MEANINGS[i]}")
+        print(f" L{i}  | <span style='color:#FF4B4B;'>{red_counts[i]:>2}</span> | {black_counts[i]:>2} | {tot:>2} | {TECH_LINE_MEANINGS[i]}")
 
     p_sun = next(d for d in data if d["planet"] == "Sun" and d["color"] == "Black")
     d_sun = next(d for d in data if d["planet"] == "Sun" and d["color"] == "Red")
     profile = f"{p_sun['line']}/{d_sun['line']}"
     
-    right_angles = ["1/3", "1/4", "2/4", "2/5", "3/5", "3/6", "4/6"]
-    left_angles = ["5/1", "5/2", "6/2", "6/3"]
-    if profile in right_angles:
-        angle_str = "右角度 (スタンドアロン実行型 / 個人の運命)"
-        cross_name = CROSS_NAMES[p_sun['gate']][0]
-    elif profile in left_angles:
-        angle_str = "左角度 (クロス・コンパイル型 / トランスパーソナル)"
-        cross_name = CROSS_NAMES[p_sun['gate']][2]
-    else:
-        angle_str = "ジャクスタポジション (固定バッチ処理型 / 固定運命)"
-        cross_name = CROSS_NAMES[p_sun['gate']][1]
-
-    print("\n=== ✝️ メイン・プロセス (インカネーション・クロス) ===")
-    print(f"スコープ : {angle_str} [{profile}]")
-    print(f"システム名: Cross of {cross_name} (太陽ゲート: {p_sun['gate']})")
+    print(f"\n[メイン・プロセス]")
+    print(f" プロファイル: {profile}")
+    print(f" 太陽ゲート  : {p_sun['gate']}")
 
     all_centers = set(CENTER_GATES.keys())
     off_centers = all_centers - set(on_centers)
     full_open = [c for c in off_centers if len(CENTER_GATES[c] & set(gates)) == 0]
     undefined = [c for c in off_centers if len(CENTER_GATES[c] & set(gates)) > 0]
     
-    print("\n=== 🚨 セキュリティ・脆弱性診断 (Not-self デバッグ) ===")
-    print("[A. フィルターなしポート] (フルオープン: 丸呑みによるDDoS注意)")
-    if not full_open: print("  該当なし")
-    for c in full_open: print(f"  ■ {CENTER_JP.get(c, c)}: {NOT_SELF_TALK_TECH[c]}")
-        
-    print("\n[B. 動的アロケーション領域] (未定義: 外部入力で発火するダミープロセス)")
-    if not undefined: print("  該当なし")
-    for c in undefined: print(f"  □ {CENTER_JP.get(c, c)}: {NOT_SELF_TALK_TECH[c]}")
-
-    print("\n[C. Webhook待機ポート] (休眠ゲート: トランジットや他ユーザーへの依存フック)")
-    dormant_by_center = collections.defaultdict(list)
-    for center in off_centers:
-        for gate in CENTER_GATES[center]:
-            if gate in gates:
-                opposing_gates = []
-                for r, cs in CHANNELS.items():
-                    for ch_g1, ch_g2, cid in cs:
-                        if gate == ch_g1: opposing_gates.append(ch_g2)
-                        elif gate == ch_g2: opposing_gates.append(ch_g1)
-                dormant_by_center[center].append((gate, opposing_gates))
-
-    if not dormant_by_center:
+    print("\n[セキュリティ・脆弱性診断 (Not-self)]")
+    if not full_open and not undefined:
         print("  該当なし")
-    else:
-        print("  ※以下のポートは、対応する「リッスン先Gate」を持つ外部API（他者や星の巡り）と接続した瞬間に、")
-        print("    未定義領域を通して強烈なプロセス（化学反応）を一時的に起動させます。\n")
-        
-        for center, d_gates in dormant_by_center.items():
-            print(f"  ■ {CENTER_JP.get(center, center)} 領域内の待機ポート")
-            for gate, opps in sorted(d_gates, key=lambda x: x[0]):
-                opp_str = ", ".join([f"Gate {o}" for o in opps])
-                print(f"    🎣 Gate {gate:<2} ➔ リッスン先: {opp_str}")
-
-    print("\n" + "="*50)
+    for c in full_open: print(f"  ■ {CENTER_JP.get(c, c)} (フルオープン)\n    DDoS攻撃注意。")
+    for c in undefined: print(f"  □ {CENTER_JP.get(c, c)} (未定義)\n    ダミープロセス発火注意。")
 
 # =====================================================================
-# ▼▼▼ 実行ボタンと結果表示 ▼▼▼
+# ▼▼▼ 5. 実行ボタンと表示用ラッパー ▼▼▼
 # =====================================================================
 if st.sidebar.button("🚀 システム解析を実行"):
     with st.spinner("システム仕様書を生成中..."):
@@ -442,7 +416,6 @@ if st.sidebar.button("🚀 システム解析を実行"):
             type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands = print_master_report(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE)
             print_tech_spec_report(type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands)
 
-        # 出力をキャプチャして、折り返しとHTML(色)を許可する魔法の枠を生成
         html_content = f.getvalue()
         wrapped_html = f"""
         <div style="
