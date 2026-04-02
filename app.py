@@ -56,12 +56,11 @@ st.markdown("<span style='font-size: 0.9em; color: gray;'>生体システムの�
 # =====================================================================
 st.sidebar.header("▼ 誕生日情報の入力 (JST)")
 
-input_date = st.sidebar.date_input("生年月日", datetime.date(1977, 2, 23))
+input_date = st.sidebar.date_input("生年月日", datetime.date(1971, 12, 20))
 
-st.sidebar.markdown("出生時刻")
-col1, col2 = st.sidebar.columns(2)
-HOUR = col1.selectbox("時", range(24), index=9)
-MINUTE = col2.selectbox("分", range(60), index=1)
+input_time = st.sidebar.time_input("出生時刻", datetime.time(9, 1))
+HOUR = input_time.hour
+MINUTE = input_time.minute
 
 YEAR = input_date.year
 MONTH = input_date.month
