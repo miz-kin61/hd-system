@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Ver 3.3 完全IT偽装版)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.4 全64ゲートIT辞書搭載版)
 # =====================================================================
 import streamlit as st
 import io
@@ -60,7 +60,7 @@ MONTH = input_date.month
 DAY = input_date.day
 
 # =====================================================================
-# ▼▼▼ 3. 計算エンジン・スコア設定 ▼▼▼
+# ▼▼▼ 3. 各種辞書・データ定義 ▼▼▼
 # =====================================================================
 CUSTOM_WEIGHTS = {
     "Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, 
@@ -69,15 +69,6 @@ CUSTOM_WEIGHTS = {
 }
 DORMANT_MULTIPLIER = 0.3 
 FORCED_GATES = set()
-
-ephe_dir = './ephe_data'
-os.makedirs(ephe_dir, exist_ok=True)
-files = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']
-base_url = 'https://github.com/aloistr/swisseph/raw/master/ephe/'
-for f in files:
-    if not os.path.exists(os.path.join(ephe_dir, f)): 
-        urllib.request.urlretrieve(base_url+f, os.path.join(ephe_dir, f))
-swe.set_ephe_path(ephe_dir)
 
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
 CENTER_GATES = {"Head": {64, 61, 63}, "Ajna": {47, 24, 4, 17, 43, 11}, "Throat": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "G": {7, 1, 13, 25, 46, 2, 15, 10}, "Heart": {21, 51, 26, 40}, "Sacral": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "Splenic": {48, 57, 44, 50, 32, 28, 18}, "SolarPlexus": {36, 22, 37, 6, 49, 55, 30}, "Root": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
@@ -94,8 +85,40 @@ CHANNELS = {
     "Splenic_Root": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]
 }
 
+# 🚀 全64ゲート IT仕様メタファー辞書
+GATE_TECH_MEANINGS = {
+    1: "【創造】独自プロトコルの創造", 2: "【受容】最適リソースの磁気ストレージ", 3: "【秩序】カオスなデータを整理するフォーマッタ", 4: "【答え】バグに対する論理的パッチ",
+    5: "【待機】一定クロックの安定スケジューラ", 6: "【摩擦】衝突による境界線チューニング", 7: "【役割】未来のアーキテクチャ設計", 8: "【貢献】独自のビジョン出力ポート",
+    9: "【フォーカス】細部へのミクロ的フォーカス", 10: "【自己行動】自分らしさの基盤OS", 11: "【アイデア】無数の概念モデリング", 12: "【慎重】適切な出力タイミング制御",
+    13: "【聞き手】過去ログの収集とリスニング", 14: "【スキル】富を増幅するパワーアンプ", 15: "【極端】多様な環境への適応バッファ", 16: "【スキル】反復テストによる精度向上",
+    17: "【意見】論理的アーキテクチャの構築", 18: "【修正】既存システムのバグ出し・修正", 19: "【アプローチ】環境リソースのニーズ検知", 20: "【今】リアルタイムの状況出力",
+    21: "【統制】リソースの中央集権的コントロール", 22: "【開放】感情データの優雅なアウトプット", 23: "【同化】複雑な概念のシンプル化・圧縮", 24: "【帰還】反復処理による最適解の発見",
+    25: "【自己のスピリット】普遍的愛の無条件ルーティング", 26: "【エゴイスト】最小労力で最大リターンを狙う効率化", 27: "【育成】他者システムのメンテナンスと保守", 28: "【プレイヤー】限界突破のストレステスト",
+    29: "【肯定】フルコミットで実行するバッチ処理", 30: "【認識】新しい体験へのアクセス権限", 31: "【影響力】論理的アルゴリズムによるリーダーシップ", 32: "【継続】レガシーシステムの価値評価",
+    33: "【プライバシー】ログのアーカイブと振り返り", 34: "【力】独立稼働するメインエンジンの馬力", 35: "【変化】新規プロセスの体験と進捗", 36: "【危機】未体験エラーの突破と処理",
+    37: "【家族】コミュニティ内のリソース共有協定", 38: "【闘争】目的完遂のためのファイアウォール", 39: "【挑発】ボトルネックを突くストレステスト", 40: "【孤独】単独処理とリソース解放のサイクル",
+    41: "【収縮】新規プロジェクトの初期化トリガー", 42: "【成長】プロセスの完遂とスケーリング", 43: "【洞察】非同期で閃く天才的アルゴリズム", 44: "【警戒】過去データに基づくパターン認識",
+    45: "【収集者】リソースの集約と権限管理", 46: "【自己決定】物理環境との完璧な同期", 47: "【抑圧】過去ログの解析による意味付け", 48: "【井戸】深層データベースからの知恵抽出",
+    49: "【原理】不要な関係の強制切断・再構築", 50: "【価値】全体システムのセキュリティ・ポリシー", 51: "【衝撃】ショック療法によるシステム再起動", 52: "【静止】深い集中へのスタンバイ状態",
+    53: "【始まり】新規タスクのキックオフ機能", 54: "【野心】上位レイヤーへの昇格ドライブ", 55: "【精神】感情の波を通じたデータ豊かさ", 56: "【刺激】体験ログのストーリー化と配信",
+    57: "【直感】リアルタイムの超高速・危機検知", 58: "【活力】システム改善への持続的デバッグ力", 59: "【親密さ】セキュリティを透過する接続プロトコル", 60: "【制限】ハードウェア制限内での確実な実行",
+    61: "【謎】未知のロジックへのアクセス試行", 62: "【詳細】要件定義と細部の完全なラベリング", 63: "【疑い】論理的破綻を検知するクエリ発行", 64: "【混乱】未整理データのキャッシュ処理"
+}
+
 # =====================================================================
-# ▼▼▼ 4. 計算・出力ロジック ▼▼▼
+# ▼▼▼ 4. スイス天文暦のセットアップ ▼▼▼
+# =====================================================================
+ephe_dir = './ephe_data'
+os.makedirs(ephe_dir, exist_ok=True)
+files = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']
+base_url = 'https://github.com/aloistr/swisseph/raw/master/ephe/'
+for f in files:
+    if not os.path.exists(os.path.join(ephe_dir, f)): 
+        urllib.request.urlretrieve(base_url+f, os.path.join(ephe_dir, f))
+swe.set_ephe_path(ephe_dir)
+
+# =====================================================================
+# ▼▼▼ 5. 計算・出力ロジック ▼▼▼
 # =====================================================================
 def get_gate_and_line(lon):
     offset = (lon - 302.0 + 360.0) % 360.0
@@ -259,7 +282,7 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             print(f"<span style='color:#FF4B4B;'>赤 {r['gate']:>2}.{r['line']}{r_sc}</span> ║ 黒 {b['gate']:>2}.{b['line']}{b_sc}\n")
             
     print(DIVIDER)
-    print("🏢 センター別 実装モジュール")
+    print("🏢 センター別 実装モジュール (Gate仕様)")
     print(DIVIDER)
     center_order = ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Splenic", "SolarPlexus", "Root"]
     for c in center_order:
@@ -284,11 +307,12 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             for g, line, p, col, s in c_gates_sorted:
                 score_str = f" [{s:>4.1f}]" if s > 0 else ""
                 p_jp = PLANET_JP.get(p, p)
+                mean_str = GATE_TECH_MEANINGS.get(g, "")
                 
                 if col == "Red":
-                    print(f"ー <span style='color:#FF4B4B;'>Gate {g:>2}.{line} ({p_jp}/赤){score_str}</span>")
+                    print(f"ー <span style='color:#FF4B4B;'>Gate {g:>2}.{line} {mean_str} ({p_jp}/赤){score_str}</span>")
                 else:
-                    print(f"ー Gate {g:>2}.{line} ({p_jp}/黒){score_str}")
+                    print(f"ー Gate {g:>2}.{line} {mean_str} ({p_jp}/黒){score_str}")
             print("") 
         
     return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
@@ -312,7 +336,6 @@ TECH_LINE_MEANINGS = {
     4: "ネットワーク・API連携", 5: "ソリューション提供", 6: "システム監査・モデリング"
 }
 
-# Not-Selfのバグと真実（IT用語版）
 CENTER_ISSUES = {
     "Head": {
         "curse": "【インストールされた外部バグ(社会の常識)】「常に明確なビジョンを持て」「自分で考えろ」\n └ 他人の疑問（不要なクエリ）を自分のタスクとして抱え込み、CPUがオーバーヒート。",
@@ -346,7 +369,7 @@ CENTER_ISSUES = {
     },
     "Splenic": {
         "curse": "【インストールされた外部バグ(社会の常識)】「石の上にも三年」「手放すのはもったいない」\n └ 『今手放すと危険だ』というレガシーな恐怖に支配され、有害な環境に依存し続ける。",
-        "truth": "【本来のハードウェア仕様】違洪感を検知したら、過去に縛られず即座に切り離せる『セキュリティ検知器』。",
+        "truth": "【本来のハードウェア仕様】違和感を検知したら、過去に縛られず即座に切り離せる『セキュリティ検知器』。",
         "solution": "【推奨デバッグコマンド】「マルウェア（違和感のある環境・人）は即アンインストール」"
     },
     "SolarPlexus": {
@@ -361,7 +384,6 @@ CENTER_ISSUES = {
     }
 }
 
-# 定義済みセンターの外部バグ（社会の呪いによるエンスト）
 DEFINED_CENTER_ISSUES = {
     "Head": {
         "curse": "【インストールされた外部バグ】「他人の悩みにも興味を持て」「もっと周りを見ろ」\n └ システム外の不要なクエリまで処理しようとし、本来のインスピレーション受信が阻害される。",
@@ -410,7 +432,6 @@ DEFINED_CENTER_ISSUES = {
     }
 }
 
-# プロファイル別 IT特性・役割（理系女子向け）
 PROFILE_TECH_MEANINGS = {
     "1/3": "【R&D型エンジニア】基礎研究（1）で強固な基盤を作り、アジャイルテスト（3）でバグを潰しながら前進する実力派。",
     "1/4": "【オープンソース開発者】深い専門知識（1）を蓄積し、強固な身内ネットワーク（4）を通じてシステムを波及させる。",
@@ -470,13 +491,21 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
         print(f" L{i}  | <span style='color:#FF4B4B;'>{red_counts[i]:>2}</span> | {black_counts[i]:>2} | {tot:>2} | {TECH_LINE_MEANINGS[i]}")
 
     p_sun = next(d for d in data if d["planet"] == "Sun" and d["color"] == "Black")
+    p_earth = next(d for d in data if d["planet"] == "Earth" and d["color"] == "Black")
     d_sun = next(d for d in data if d["planet"] == "Sun" and d["color"] == "Red")
+    d_earth = next(d for d in data if d["planet"] == "Earth" and d["color"] == "Red")
+    
     profile = f"{p_sun['line']}/{d_sun['line']}"
     
     print(f"\n[メイン・プロセス]")
     print(f" プロファイル: {profile}")
     print(f" └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '解析中...')}")
-    print(f" 太陽ゲート  : {p_sun['gate']}")
+    
+    print(f"\n[コア・アーキテクチャ (インカネーション・クロス)]")
+    print(f" └ 黒Sun (基本UI)  : Gate {p_sun['gate']:>2} {GATE_TECH_MEANINGS.get(p_sun['gate'])}")
+    print(f" └ 黒Earth (接地基盤): Gate {p_earth['gate']:>2} {GATE_TECH_MEANINGS.get(p_earth['gate'])}")
+    print(f" └ 赤Sun (無意識駆動): Gate {d_sun['gate']:>2} {GATE_TECH_MEANINGS.get(d_sun['gate'])}")
+    print(f" └ 赤Earth (無意識基盤): Gate {d_earth['gate']:>2} {GATE_TECH_MEANINGS.get(d_earth['gate'])}")
 
     all_centers = set(CENTER_GATES.keys())
     off_centers = all_centers - set(on_centers)
@@ -506,7 +535,7 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
                 print(" （※安定した固定エネルギーモジュールとして正常稼働中）")
 
 # =====================================================================
-# ▼▼▼ 5. 実行ボタンと表示用ラッパー ▼▼▼
+# ▼▼▼ 6. 実行ボタンと表示用ラッパー ▼▼▼
 # =====================================================================
 if st.sidebar.button("🚀 システム解析を実行"):
     with st.spinner("システム仕様書を生成中..."):
