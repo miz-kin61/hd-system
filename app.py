@@ -417,7 +417,7 @@ if st.sidebar.button("🚀 システム解析を実行"):
             print_tech_spec_report(type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands)
 
         html_content = f.getvalue()
-wrapped_html = f"""
+        wrapped_html = f"""
         <div style="
             background-color: #1E1E1E; 
             color: #D4D4D4; 
@@ -430,6 +430,10 @@ wrapped_html = f"""
             overflow-x: hidden;
         ">
 {html_content}
+        </div>
+        """
+        st.markdown(wrapped_html, unsafe_allow_html=True)
+        st.success("解析完了！")
         </div>
         """
         st.markdown(wrapped_html, unsafe_allow_html=True)
