@@ -51,13 +51,12 @@ st.sidebar.header("▼ 誕生日情報の入力 (JST)")
 input_date = st.sidebar.date_input("生年月日", datetime.date(1977, 2, 23))
 
 # ここをスマホ純正UI呼び出しの time_input (1分刻み) に変更
-input_time = st.sidebar.time_input("出生時刻", datetime.time(9, 1), step=60)
+input_date = st.sidebar.date_input("生年月日", datetime.date(1977, 2, 23))
 
-YEAR = input_date.year
-MONTH = input_date.month
-DAY = input_date.day
-HOUR = input_time.hour
-MINUTE = input_time.minute
+st.sidebar.markdown("出生時刻")
+col1, col2 = st.sidebar.columns(2)
+HOUR = col1.selectbox("時", range(24), index=9)
+MINUTE = col2.selectbox("分", range(60), index=1)
 
 # =====================================================================
 # ▼▼▼ 3. 計算エンジン・スコア設定 ▼▼▼
@@ -82,7 +81,7 @@ swe.set_ephe_path(ephe_dir)
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
 CENTER_GATES = {"Head": {64, 61, 63}, "Ajna": {47, 24, 4, 17, 43, 11}, "Throat": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "G": {7, 1, 13, 25, 46, 2, 15, 10}, "Heart": {21, 51, 26, 40}, "Sacral": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "Splenic": {48, 57, 44, 50, 32, 28, 18}, "SolarPlexus": {36, 22, 37, 6, 49, 55, 30}, "Root": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
 MOTOR_CENTERS = {"Sacral", "Heart", "SolarPlexus", "Root"}
-CENTER_JP = {"Head": "ヘッド", "Ajna": "アジュナ", "Throat": "喉", "G": "G", "Heart": "ハート", "Sacral": "仙骨", "Splenic": "Spleen", "SolarPlexus": "太陽神経叢", "Root": "ルート"}
+CENTER_JP = {"Head": "ヘッド", "Ajna": "アジュナ", "Throat": "喉", "G": "G", "Heart": "ハート", "Sacral": "仙骨", "Splenic": "脾臓", "SolarPlexus": "太陽神経叢", "Root": "ルート"}
 CHANNELS = {
     "Head_Ajna": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")], "Ajna_Throat": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")],
     "Throat_G": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")], "Throat_Heart": [(45,21,"45-21")],
@@ -237,7 +236,7 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
     print(DIVIDER)
-    print(f"🔋 自発エネルギー密度: {raw_s:.1f} / 100")
+    print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
     if connected_motors:
         motors_jp = "・".join([CENTER_JP.get(m, m) for m in connected_motors])
         print(f"💡 喉に連動するモーター: {motors_jp}")
