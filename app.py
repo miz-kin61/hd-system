@@ -235,8 +235,8 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
-print(DIVIDER)
-    print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
+    print(DIVIDER)
+    print(f"🔋 自発エネルギー密度: {raw_s:.1f} ")
     if connected_motors:
         motors_jp = "・".join([CENTER_JP.get(m, m) for m in connected_motors])
         print(f"💡 喉に連動するモーター: {motors_jp}")
