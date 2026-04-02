@@ -58,8 +58,6 @@ MINUTE = col2.selectbox("分", range(60), index=1)
 YEAR = input_date.year
 MONTH = input_date.month
 DAY = input_date.day
-HOUR = input_time.hour
-MINUTE = input_time.minute
 
 # =====================================================================
 # ▼▼▼ 3. 計算エンジン・スコア設定 ▼▼▼
