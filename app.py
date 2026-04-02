@@ -322,7 +322,7 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                     print(f"ー Gate {g:>2}.{line} ({p_jp}/黒){score_str}")
             print("") # ブロック終わりの空行
         
-    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, islands
+    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
 
 TECH_TYPE_STRENGTHS = {
     "Generator": "持続可能なメインエンジン稼働。\n反復タスクによるシステム最適化と、外部トリガーに対する高いレスポンス性能。",
