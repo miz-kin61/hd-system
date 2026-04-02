@@ -58,9 +58,9 @@ st.sidebar.header("▼ 誕生日情報の入力 (JST)")
 
 input_date = st.sidebar.date_input("生年月日", datetime.date(1971, 12, 20))
 
-st.sidebar.markdown("出生時刻")
-HOUR = st.sidebar.slider("時", 0, 23, 9)
-MINUTE = st.sidebar.slider("分", 0, 59, 1)
+input_time = st.sidebar.time_input("出生時刻", datetime.time(9, 1), step=60)
+HOUR = input_time.hour
+MINUTE = input_time.minute
 
 YEAR = input_date.year
 MONTH = input_date.month
