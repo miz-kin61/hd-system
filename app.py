@@ -279,9 +279,9 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             rs = calc_gate_score(r["gate"], p) if p != "Chiron" else 0.0
             bs = calc_gate_score(b["gate"], p) if p != "Chiron" else 0.0
             
-            # スコアが0なら空白、あれば数値を表示
-            r_sc = f" [{rs:>4.1f}]" if rs>0 else ""
-            b_sc = f" [{bs:>4.1f}]" if bs>0 else ""
+# スコアが0なら7文字分の空白を埋め、あれば数値を表示して長さを固定
+            r_sc = f" [{rs:>4.1f}]" if rs>0 else "       "
+            b_sc = f" [{bs:>4.1f}]" if bs>0 else "       "
             
             p_jp = PLANET_JP.get(p, p)
             
@@ -417,7 +417,7 @@ if st.sidebar.button("🚀 システム解析を実行"):
             print_tech_spec_report(type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands)
 
         html_content = f.getvalue()
-        wrapped_html = f"""
+wrapped_html = f"""
         <div style="
             background-color: #1E1E1E; 
             color: #D4D4D4; 
@@ -429,7 +429,7 @@ if st.sidebar.button("🚀 システム解析を実行"):
             line-height: 1.6;
             overflow-x: hidden;
         ">
-        {html_content}
+{html_content}
         </div>
         """
         st.markdown(wrapped_html, unsafe_allow_html=True)
