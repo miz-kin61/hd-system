@@ -34,7 +34,7 @@ pre {
 # =====================================================================
 st.sidebar.header("▼ 誕生日情報の入力 (JST)")
 
-input_date = st.sidebar.date_input("生年月日", datetime.date(1977, 2, 23))
+input_date = st.sidebar.date_input("生年月日", datetime.date(1971, 12, 20))
 
 st.sidebar.markdown("出生時刻")
 col1, col2 = st.sidebar.columns(2)
