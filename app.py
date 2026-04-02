@@ -28,12 +28,8 @@ input_date = st.sidebar.date_input("生年月日", datetime.date(1977, 2, 23))
 
 st.sidebar.markdown("出生時刻")
 col1, col2 = st.sidebar.columns(2)
-HOUR = col1.number_input("時 (0-23)", min_value=0, max_value=23, value=9, step=1)
-MINUTE = col2.number_input("分 (0-59)", min_value=0, max_value=59, value=1, step=1)
-
-YEAR = input_date.year
-MONTH = input_date.month
-DAY = input_date.day
+HOUR = col1.selectbox("時", range(24), index=9)
+MINUTE = col2.selectbox("分", range(60), index=1)
 # =====================================================================
 # ▼▼▼ 計算エンジン設定 ▼▼▼
 # =====================================================================
