@@ -74,6 +74,18 @@ GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 
 CENTER_GATES = {"Head": {64, 61, 63}, "Ajna": {47, 24, 4, 17, 43, 11}, "Throat": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "G": {7, 1, 13, 25, 46, 2, 15, 10}, "Heart": {21, 51, 26, 40}, "Sacral": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "Splenic": {48, 57, 44, 50, 32, 28, 18}, "SolarPlexus": {36, 22, 37, 6, 49, 55, 30}, "Root": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
 MOTOR_CENTERS = {"Sacral", "Heart", "SolarPlexus", "Root"}
 CENTER_JP = {"Head": "ヘッド", "Ajna": "アジュナ", "Throat": "喉", "G": "G", "Heart": "ハート", "Sacral": "仙骨", "Splenic": "脾臓", "SolarPlexus": "太陽神経叢", "Root": "ルート"}
+# 各センターに関連する人体臓器・部位（生物学的相関）
+CENTER_ORGANS = {
+    "Head": "松果体",
+    "Ajna": "脳下垂体",
+    "Throat": "甲状腺・副甲状腺",
+    "G": "肝臓・血液",
+    "Heart": "心臓・胸腺・胆嚢",
+    "Sacral": "卵巣・精巣",
+    "Splenic": "脾臓・リンパ系",
+    "SolarPlexus": "膵臓・腎臓・神経系",
+    "Root": "副腎"
+}
 CHANNELS = {
     "Head_Ajna": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")], "Ajna_Throat": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")],
     "Throat_G": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")], "Throat_Heart": [(45,21,"45-21")],
@@ -517,8 +529,9 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
     if not off_centers and not on_centers:
         print("  全モジュールが未定義です。")
         
-    for c in ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Splenic", "SolarPlexus", "Root"]:
-        print(f"\n■ {CENTER_JP[c]}")
+for c in ["Head", "Ajna", "Throat", "G", "Heart", "Sacral", "Splenic", "SolarPlexus", "Root"]:
+        # センター名に臓器名を併記
+        print(f"\n■ {CENTER_JP[c]} 【{CENTER_ORGANS[c]}】")
         if c in off_centers:
             status_text = "フルオープン" if c in full_open else "未定義"
             print(f"状態: {status_text} (クラウド型レシーバー)")
@@ -533,7 +546,6 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
                 print(f"🚀 {DEFINED_CENTER_ISSUES[c]['solution']}")
             else:
                 print(" （※安定した固定エネルギーモジュールとして正常稼働中）")
-
 # =====================================================================
 # ▼▼▼ 6. 実行ボタンと表示用ラッパー ▼▼▼
 # =====================================================================
