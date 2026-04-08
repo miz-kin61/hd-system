@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Ver 3.8 本日の集大成＆UX完成版)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.9 モーター供給連動スコア版)
 # =====================================================================
 import streamlit as st
 import io
@@ -13,7 +13,6 @@ import urllib.request
 # =====================================================================
 # ▼▼▼ 1. 画面・見た目の設定 ▼▼▼
 # =====================================================================
-# 🌟 ⑿ アイコンを赤ちゃん（👶）に変更！
 st.set_page_config(page_title="体質診断レポート", page_icon="👶", layout="wide", initial_sidebar_state="expanded")
 
 DIVIDER = "-" * 35
@@ -50,7 +49,6 @@ pre {
 </style>
 """, unsafe_allow_html=True)
 
-# 🌟 ⒂ タイトル・サブタイトルを太字に
 st.markdown("### **👶 体質・生命力 診断レポート**")
 st.markdown("<span style='font-size: 0.9em; color: gray;'>**生まれ持った体の仕組みと、心身のエネルギーの流れを読み解きます。**</span>", unsafe_allow_html=True)
 
@@ -259,6 +257,21 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     initial_islands = get_islands_for_gates(core_g, initial_on_c)
     on_c = initial_on_c
 
+    # 🌟 モーターから直接エネルギー供給を受けているセンターを特定（スコア計算用）
+    energized_centers = set(MOTOR_CENTERS)
+    
+    # Gセンター(自己)がモーターと直結しているか判定
+    if {25, 51}.issubset(core_g) or {5, 15}.issubset(core_g) or {2, 14}.issubset(core_g) or {29, 46}.issubset(core_g) or {34, 10}.issubset(core_g):
+        energized_centers.add("自己")
+        
+    # 脾臓(直感)がモーターと直結しているか判定
+    if {18, 58}.issubset(core_g) or {28, 38}.issubset(core_g) or {32, 54}.issubset(core_g) or {34, 57}.issubset(core_g) or {27, 50}.issubset(core_g) or {26, 44}.issubset(core_g):
+        energized_centers.add("直感")
+        
+    # 喉(表現)がモーターと直結しているか判定
+    if {34, 20}.issubset(core_g) or {12, 22}.issubset(core_g) or {35, 36}.issubset(core_g) or {21, 45}.issubset(core_g):
+        energized_centers.add("表現")
+
     b_gates_1 = []
     b_gates_2 = []
 
@@ -290,7 +303,6 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     if len(initial_islands) == 0:
         definition_type = "全感受型"
         is_rare = True
-        rare_message = "※全体人口のわずか1%未満の非常に稀な体質（レフレクター）です。"
     elif len(initial_islands) == 1:
         definition_type = "一体型"
     elif len(initial_islands) == 2:
@@ -299,13 +311,11 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
         else:
             definition_type = "特殊二系統型"
             is_rare = True
-            rare_message = "※島が離れすぎている特殊なスプリット（ブロード・スプリット）をお持ちです。"
     elif len(initial_islands) == 3:
         definition_type = "三系統型"
     elif len(initial_islands) == 4:
         definition_type = "四系統型"
         is_rare = True
-        rare_message = "※非常に珍しい4分裂の特殊な体質（クアッド・スプリット）です。"
     else:
         definition_type = "多系統型"
 
@@ -340,21 +350,20 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             type_str = "導き型"
             if len(on_c.intersection(LOWER_CENTERS)) == 0:
                 is_rare = True
-                rare_message = "※喉から下の中枢がすべて未定義の特殊な体質（メンタル・プロジェクター）です。"
         else:
             type_str = "反射型"
 
+    # 🌟 モーター供給連動スコア計算（energized_centersを使用）
     def calc_gate_score(gate, planet):
         c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
-        if c in MOTOR_CENTERS:
+        if c in energized_centers:
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
 
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
-    # 🌟 ⒀ レア度アラートの更なるスッキリ化（「状態」→「特徴」、重複文章のカット）
     if is_rare:
-        print(f"<span class='rare-alert'>★ 【特殊な特徴を検出】詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
+        print(f"<span class='rare-alert'>★ 【特殊な特徴を検出】\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
 
     print(DIVIDER)
     print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
@@ -377,8 +386,12 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                 c_gates.append((x["gate"], x["line"], x["planet"], x["color"], s))
 
         print(f"\n■ **{c}**（{CENTER_ORGANS[c]}）\n")
-        # 🌟 ⑾ 小計にバッテリーアイコン挿入
-        print(f"{status}  [小計: {c_score:.1f}🔋]\n")
+        
+        # 🌟 頭脳と思考からは小計スコア表示を排除
+        if c in ["頭脳", "思考"]:
+            print(f"{status}\n")
+        else:
+            print(f"{status}  [小計: {c_score:.1f}🔋]\n")
 
         if not c_gates:
             print("ー 該当する扉なし\n")
@@ -389,22 +402,23 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                 p_jp = PLANET_JP.get(p, p)
                 mean_str = GATE_TECH_MEANINGS.get(g, "")
 
-                # 🌟 ⒁ ライン部分（.line）をカット。整数ゲートのみ表示。
                 if col == "Red":
                     print(f"\nー <span class='unconscious-red'>扉 {g:>2} {mean_str} ({p_jp}/先天){score_str}</span>")
                 else:
                     print(f"\nー 扉 {g:>2} {mean_str} ({p_jp}/後天){score_str}")
             print("")
 
-    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
+    # energized_centersを惑星データ出力にも渡す
+    return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands, energized_centers
 
-def print_planet_data(data, on_c):
+# 🌟 惑星データ出力でも動的スコア(energized_centers)を参照する
+def print_planet_data(data, on_c, energized_centers):
     print("\n" + "=" * 35)
     print("🔭 【詳細データ】各星と扉の対応表")
     print("=" * 35)
     def calc_score(gate, planet):
         c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
-        if c in MOTOR_CENTERS:
+        if c in energized_centers:
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
 
@@ -559,7 +573,6 @@ PROFILE_TECH_MEANINGS = {
 def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_1, b_gates_2, islands):
     print(DIVIDER)
     
-    # 🌟 ⒂ タイトルとサブタイトルを太字に
     print("**👶 体質・生命力 診断レポート**")
     print("**生まれ持った体の仕組みと心身の特性**\n")
     print(DIVIDER)
@@ -652,7 +665,6 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
             else:
                 print(" （安定したエネルギーの中枢として、正常に働いています）\n")
 
-
 # =====================================================================
 # ▼▼▼ 6. 実行ボタンと表示 ▼▼▼
 # =====================================================================
@@ -661,12 +673,12 @@ if st.sidebar.button("🌿 体質診断を開始する"):
         f = io.StringIO()
         with contextlib.redirect_stdout(f):
             c_data, jd_d = get_chart_data(YEAR, MONTH, DAY, HOUR, MINUTE)
-            type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands = print_master_report(
+            type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands, energized_c = print_master_report(
                 c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE
             )
             print_tech_spec_report(type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands)
             
-            print_planet_data(full_data, on_c)
+            print_planet_data(full_data, on_c, energized_c)
 
         html_content = f.getvalue()
 
