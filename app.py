@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Ver 3.6 究極のやさしさ＆UX完成版)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.7 究極レイアウト＆UX完成版)
 # =====================================================================
 import streamlit as st
 import io
@@ -23,7 +23,7 @@ PLANET_ORDER = [
     "Uranus", "Neptune", "Pluto", "Chiron"
 ]
 
-# 🌟 ⑸ ノードの名称を「交点」に変更
+# 🌟 ⑸ 北南の交点に変更
 PLANET_JP = {
     "Sun": "太陽", "Earth": "地球", "Moon": "月",
     "NorthNode": "北の交点", "SouthNode": "南の交点",
@@ -249,9 +249,9 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     dv = swe.revjul(jd_d)
     dj = datetime.datetime(int(dv[0]), int(dv[1]), int(dv[2]), int(dv[3]), int((dv[3] % 1) * 60)) + datetime.timedelta(hours=9)
     
-    # 🌟 ⑹ 誕生日とデザイン時刻のレイアウト調整（全角スペースと改行）
-    print(f"意識　（後天）: {y}/{m:02d}/{d:02d} {h:02d}:{mi:02d}")
-    print(f"<span class='unconscious-red'>無意識（先天）: {dj.strftime('%Y/%m/%d %H:%M')}</span>\n")
+    # 🌟 ⑹ 意識・無意識の全角スペースと改行レイアウト
+    print(f"意識　（後天）　： {y}/{m:02d}/{d:02d} {h:02d}:{mi:02d}\n")
+    print(f"<span class='unconscious-red'>無意識（先天）　： {dj.strftime('%Y/%m/%d %H:%M')}</span>\n")
 
     core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
 
@@ -284,14 +284,12 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                         if len(test_islands) > 0 and len(test_islands) < len(initial_islands):
                             b_gates_2.append((min(g1, g2), max(g1, g2)))
 
-    # 🌟 ⑶ 定義型の名称変更（カタカナを伏せる）＆激レア判定
+    # 🌟 ⑶ 専門用語の撤廃と激レア判定
     is_rare = False
-    rare_message = ""
 
     if len(initial_islands) == 0:
         definition_type = "全感受型"
         is_rare = True
-        rare_message = "※全体人口のわずか1%未満の非常に稀な体質（レフレクター）です。"
     elif len(initial_islands) == 1:
         definition_type = "一体型"
     elif len(initial_islands) == 2:
@@ -300,13 +298,11 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
         else:
             definition_type = "特殊二系統型"
             is_rare = True
-            rare_message = "※島が離れすぎている特殊なスプリット（ブロード・スプリット）をお持ちです。"
     elif len(initial_islands) == 3:
         definition_type = "三系統型"
     elif len(initial_islands) == 4:
         definition_type = "四系統型"
         is_rare = True
-        rare_message = "※非常に珍しい4分裂の特殊な体質（クアッド・スプリット）です。"
     else:
         definition_type = "多系統型"
 
@@ -332,7 +328,7 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                     connected_motors.add(curr)
                 queue.extend([n for n in adj[curr] if n not in v_throat])
 
-    # 🌟 ⑵ 体質タイプの名称変更（カタカナを伏せる）
+    # 🌟 ⑵ 体質タイプの正式名撤廃
     if "生命力" in on_c:
         type_str = "表現する生命型" if motor_to_throat else "生命力型"
     else:
@@ -342,7 +338,6 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             type_str = "導き型"
             if len(on_c.intersection(LOWER_CENTERS)) == 0:
                 is_rare = True
-                rare_message = "※喉から下の中枢がすべて未定義の特殊な体質（メンタル・プロジェクター）です。"
         else:
             type_str = "反射型"
 
@@ -354,8 +349,9 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
+    # 🌟 ⑽ レア度アラートのシンプル化
     if is_rare:
-        print(f"<span class='rare-alert'>★ 【特殊な状態を検出】かなり特殊な特徴をお持ちです。\n{rare_message}\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
+        print(f"<span class='rare-alert'>★ 【特殊な状態を検出】かなり特殊な特徴をお持ちです。\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
 
     print(DIVIDER)
     print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
@@ -377,8 +373,9 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                 c_score += s
                 c_gates.append((x["gate"], x["line"], x["planet"], x["color"], s))
 
-        print(f"■ {c}（{CENTER_ORGANS[c]}）")
-        print(f"{status}  [小計: {c_score:.1f}]")
+        # 🌟 ⑻ 中枢名の太字と改行
+        print(f"\n■ **{c}**（{CENTER_ORGANS[c]}）\n")
+        print(f"{status}  [小計: {c_score:.1f}]\n")
 
         if not c_gates:
             print("ー 該当する扉なし\n")
@@ -389,15 +386,16 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                 p_jp = PLANET_JP.get(p, p)
                 mean_str = GATE_TECH_MEANINGS.get(g, "")
 
+                # 🌟 ⑻ 「ー扉」の前の改行
                 if col == "Red":
-                    print(f"ー <span class='unconscious-red'>扉 {g:>2}.{line} {mean_str} ({p_jp}/先天){score_str}</span>")
+                    print(f"\nー <span class='unconscious-red'>扉 {g:>2}.{line} {mean_str} ({p_jp}/先天){score_str}</span>")
                 else:
-                    print(f"ー 扉 {g:>2}.{line} {mean_str} ({p_jp}/後天){score_str}")
+                    print(f"\nー 扉 {g:>2}.{line} {mean_str} ({p_jp}/後天){score_str}")
             print("")
 
     return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
 
-# 🌟 ⑸ 惑星データ出力（最下部用）
+# 🌟 ⑸ 惑星データと区切り線の調整
 def print_planet_data(data, on_c):
     print("\n" + "=" * 35)
     print("🔭 【詳細データ】各星と扉の対応表")
@@ -421,9 +419,9 @@ def print_planet_data(data, on_c):
             p_jp = PLANET_JP.get(p, p)
 
             print(f"{p_jp}")
-            print(f"<span class='unconscious-red'>先天 {r['gate']:>2}.{r['line']}{r_sc}</span> ║ 後天 {b['gate']:>2}.{b['line']}{b_sc}\n")
+            # 扉番号を厳密に整形して║の縦位置を綺麗に揃える
+            print(f"<span class='unconscious-red'>先天 {r['gate']:02d}.{r['line']}{r_sc}</span> ║ 後天 {b['gate']:02d}.{b['line']}{b_sc}\n")
 
-# 🌟 ⑵ 体質タイプ辞書のキー変更
 TECH_TYPE_STRENGTHS = {
     "生命力型": "安定した生命力を持ち続けるエンジン体質。\n繰り返しの積み重ねで体と心を最高の状態へ整え、外からの呼びかけへの反応力が高い。",
     "表現する生命型": "複数のことを同時にこなす多機能型の体質。\n試行錯誤しながら最短の道を直感で見つける、素早い行動力を持つ。",
@@ -446,7 +444,7 @@ TECH_LINE_MEANINGS = {
     5: "問題を解決する力", 6: "全体を見渡して整える力"
 }
 
-# 🌟 ⑺ 歪み診断辞書のレイアウト変更（アイコンと改行の徹底）
+# 🌟 ⑺ 歪み診断のアイコンと改行の徹底
 CENTER_ISSUES = {
     "頭脳": {
         "curse": "🌀 【外から植えつけられた思い込み】「いつも明確なビジョンを持て」「自分で考えろ」\n\n └ 他人の疑問（余計な心配ごと）を自分のことのように抱え込み、頭が疲れ果ててしまう。",
@@ -560,41 +558,44 @@ PROFILE_TECH_MEANINGS = {
 
 def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_1, b_gates_2, islands):
     print(DIVIDER)
+    
+    # 🌟 ⑼ サブタイトル後の改行
     print("🏥 体質・生命力 診断レポート")
-    print("   生まれ持った体の仕組みと心身の特性")
+    print("   生まれ持った体の仕組みと心身の特性\n")
     print(DIVIDER)
 
-    print(f"\n【体質タイプ】: {type_str}")
-    print(f" └ 特徴: {TECH_TYPE_STRENGTHS.get(type_str, '解析中')}")
+    # 🌟 ⑼ └ の前の改行を徹底
+    print(f"\n【体質タイプ】: {type_str}\n")
+    print(f"\n └ 特徴: {TECH_TYPE_STRENGTHS.get(type_str, '解析中')}\n")
 
-    print("\n【活性化している中枢（エネルギーが安定して流れている部位）】")
+    print("\n【活性化している中枢（エネルギーが安定して流れている部位）】\n")
     if not on_centers:
-        print(" └ すべての中枢が外からの影響を受けやすい状態です。")
+        print("\n └ すべての中枢が外からの影響を受けやすい状態です。\n")
     for center in on_centers:
-        print(f" └ {center}（{CENTER_ORGANS.get(center, '')}）: {TECH_CENTER_STRENGTHS.get(center, '')}")
+        print(f"\n └ {center}（{CENTER_ORGANS.get(center, '')}）: {TECH_CENTER_STRENGTHS.get(center, '')}\n")
 
-    print("\n【心身の統合状態（つながりの扉）】")
-    print(f"構成タイプ: {def_type}")
+    print("\n【心身の統合状態（つながりの扉）】\n")
+    print(f"構成タイプ: {def_type}\n")
 
     if "特殊二系統型" in def_type:
-        print(" └ 特徴: 島が遠く離れており、1つの扉では繋がりません。他者との関わりを通じて時間をかけて全体を統合していく体質です。")
+        print("\n └ 特徴: 島が遠く離れており、1つの扉では繋がりません。他者との関わりを通じて時間をかけて全体を統合していく体質です。\n")
 
-    # 🌟 ⑴ 橋渡しの扉のくどい文章をまとめる
+    # 🌟 ⑴ 橋渡しの文章をスマートにまとめる
     if len(islands) <= 1:
-        print("🌟 橋渡しの扉: なし（全体がひとつにつながっています）")
+        print("🌟 橋渡しの扉: なし（全体がひとつにつながっています）\n")
     else:
         if b_gates_1:
             bg_list = sorted(list(set(b_gates_1)))
-            print(f"🌟 橋渡しの扉: {bg_list}")
+            print(f"🌟 橋渡しの扉: {bg_list}\n")
             if len(bg_list) >= 3:
                 g_strs = ", ".join([str(g) for g in bg_list])
-                print(f"  - 扉 {g_strs} のいずれかが開くと: 心身の断絶が消え、全体がひとつにつながります。")
+                print(f"\n └ 扉 {g_strs} のいずれかが開くと: 心身の断絶が消え、全体がひとつにつながります。\n")
             else:
                 for g in bg_list:
-                    print(f"  - 扉 {g:>2} が開くと: 心身の断絶が消え、全体がひとつにつながります。")
+                    print(f"\n └ 扉 {g:>2} が開くと: 心身の断絶が消え、全体がひとつにつながります。\n")
         elif b_gates_2:
             combo_strs = [f"[{bg1}, {bg2}]" for bg1, bg2 in b_gates_2]
-            print(f"🌟 広域の橋渡しの扉 (特殊二系統型用):\n   {', '.join(combo_strs)}")
+            print(f"🌟 広域の橋渡しの扉 (特殊二系統型用):\n   {', '.join(combo_strs)}\n")
 
     red_counts = {i: 0 for i in range(1, 7)}
     black_counts = {i: 0 for i in range(1, 7)}
@@ -603,12 +604,12 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
             if d["color"] == "Red": red_counts[d["line"]] += 1
             else: black_counts[d["line"]] += 1
 
-    # 🌟 ⑷ 層別の構成のレイアウト変更（改行と太字対応）
-    print("\n**【層別の構成（各層の扉の数）】**")
-    print("<b>層 ║ <span class='unconscious-red'>先天</span> ║ 後天 ║ 合計 ║ 特性</b>")
+    # 🌟 ⑷ 層別のレイアウト・│への変更
+    print("\n**【層別の構成（各層の扉の数）】**\n")
+    print("<b>層 ║ <span class='unconscious-red'>先天</span> ║ 後天 ║ 合計 ║ 特性</b>\n")
     for i in range(1, 7):
         tot = red_counts[i] + black_counts[i]
-        print(f" {i}層 ║ <span class='unconscious-red'>{red_counts[i]:>2}</span> ║ {black_counts[i]:>2} ║ {tot:>2} ║ {TECH_LINE_MEANINGS[i]}")
+        print(f" {i}層 ║ <span class='unconscious-red'>{red_counts[i]:>2}</span> │ {black_counts[i]:>2} ║ {tot:>2} ║ {TECH_LINE_MEANINGS[i]}\n")
 
     p_sun = next(d for d in data if d["planet"] == "Sun" and d["color"] == "Black")
     p_earth = next(d for d in data if d["planet"] == "Earth" and d["color"] == "Black")
@@ -617,15 +618,16 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
 
     profile = f"{p_sun['line']}/{d_sun['line']}"
 
-    print(f"\n【人生のテーマ（プロファイル）】")
-    print(f" 構成: {profile}")
-    print(f" └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '解析中...')}")
+    # 🌟 ⑷ プロファイル→社会での役割へ
+    print(f"\n【人生のテーマ（社会での役割）】\n")
+    print(f" 構成: {profile}\n")
+    print(f"\n └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '解析中...')}\n")
 
-    print(f"\n【人生の土台（受胎十字）】")
-    print(f" └ 後天・太陽（意識の方向）  : 扉 {p_sun['gate']:>2}  {GATE_TECH_MEANINGS.get(p_sun['gate'])}")
-    print(f" └ 後天・地球（意識の土台）  : 扉 {p_earth['gate']:>2}  {GATE_TECH_MEANINGS.get(p_earth['gate'])}")
-    print(f" └ 先天・太陽（無意識の方向）: 扉 {d_sun['gate']:>2}  {GATE_TECH_MEANINGS.get(d_sun['gate'])}")
-    print(f" └ 先天・地球（無意識の土台）: 扉 {d_earth['gate']:>2}  {GATE_TECH_MEANINGS.get(d_earth['gate'])}")
+    print(f"\n【人生の土台（受胎十字）】\n")
+    print(f"\n └ 後天・太陽（意識の方向）  : 扉 {p_sun['gate']:>2}  {GATE_TECH_MEANINGS.get(p_sun['gate'])}\n")
+    print(f"\n └ 後天・地球（意識の土台）  : 扉 {p_earth['gate']:>2}  {GATE_TECH_MEANINGS.get(p_earth['gate'])}\n")
+    print(f"\n └ 先天・太陽（無意識の方向）: 扉 {d_sun['gate']:>2}  {GATE_TECH_MEANINGS.get(d_sun['gate'])}\n")
+    print(f"\n └ 先天・地球（無意識の土台）: 扉 {d_earth['gate']:>2}  {GATE_TECH_MEANINGS.get(d_earth['gate'])}\n")
 
     all_centers = set(CENTER_GATES.keys())
     off_centers = all_centers - set(on_centers)
@@ -635,24 +637,24 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
     print("🚨 心身の歪み診断（外からの影響による不調と、整えるための言葉）")
     print(DIVIDER)
     if not off_centers and not on_centers:
-        print("  すべての中枢が感受性の高い状態です。")
+        print("  すべての中枢が感受性の高い状態です。\n")
 
     for c in ["頭脳", "思考", "表現", "自己", "意志", "生命力", "直感", "感情", "活力"]:
-        print(f"\n■ {c}（{CENTER_ORGANS[c]}）")
+        print(f"\n■ **{c}**（{CENTER_ORGANS[c]}）\n")
         if c in off_centers:
             status_text = "完全に感受性が開いている（外の影響を強く受ける）" if c in full_open else "感受性が高い（外から影響を受けやすい）"
-            print(f"状態: {status_text}\n")
-            print(f"{CENTER_ISSUES[c]['curse']}\n")
-            print(f"{CENTER_ISSUES[c]['truth']}\n")
-            print(f"{CENTER_ISSUES[c]['solution']}")
+            print(f"状態: {status_text}\n\n")
+            print(f"{CENTER_ISSUES[c]['curse']}\n\n")
+            print(f"{CENTER_ISSUES[c]['truth']}\n\n")
+            print(f"{CENTER_ISSUES[c]['solution']}\n")
         else:
-            print("状態: 活性化している（安定したエネルギーが流れている）\n")
+            print("状態: 活性化している（安定したエネルギーが流れている）\n\n")
             if c in DEFINED_CENTER_ISSUES:
-                print(f"{DEFINED_CENTER_ISSUES[c]['curse']}\n")
-                print(f"{DEFINED_CENTER_ISSUES[c]['truth']}\n")
-                print(f"{DEFINED_CENTER_ISSUES[c]['solution']}")
+                print(f"{DEFINED_CENTER_ISSUES[c]['curse']}\n\n")
+                print(f"{DEFINED_CENTER_ISSUES[c]['truth']}\n\n")
+                print(f"{DEFINED_CENTER_ISSUES[c]['solution']}\n")
             else:
-                print(" （安定したエネルギーの中枢として、正常に働いています）")
+                print(" （安定したエネルギーの中枢として、正常に働いています）\n")
 
 
 # =====================================================================
@@ -672,9 +674,10 @@ if st.sidebar.button("🌿 体質診断を開始する"):
 
         html_content = f.getvalue()
 
+        # 🌟 CSSフォント指定をより厳密に（レイアウト崩れを防ぐ）
         html_style = (
             "background-color: #FFFFFF; color: #333333; padding: 1.5rem; border-radius: 0.5rem; "
-            "border: 1px solid #DDDDDD; font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', monospace; "
+            "border: 1px solid #DDDDDD; font-family: monospace, 'Hiragino Kaku Gothic Pro', 'Meiryo'; "
             "white-space: pre-wrap; word-wrap: break-word; line-height: 1.8; overflow-x: hidden;"
         )
         wrapped_html = f"<div style='{html_style}'>\n{html_content}\n</div>"
