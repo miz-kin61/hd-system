@@ -354,7 +354,7 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
     # 🌟 ⒀ レア度アラートの更なるスッキリ化（「状態」→「特徴」、重複文章のカット）
     if is_rare:
-        print(f"<span class='rare-alert'>★ 【特殊な特徴を検出】\n{rare_message}\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
+        print(f"<span class='rare-alert'>★ 【特殊な特徴を検出】詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
 
     print(DIVIDER)
     print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
