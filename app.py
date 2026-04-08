@@ -198,7 +198,7 @@ def get_chart_data(y, m, d, h, mi):
         swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode",
         swe.MERCURY: "Mercury", swe.VENUS: "Venus", swe.MARS: "Mars",
         swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus",
-        swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", "Chiron": "Chiron"
+        swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"
     }
     for is_red, jd in [(True, jd_d), (False, jd_b)]:
         col = "Red" if is_red else "Black"
