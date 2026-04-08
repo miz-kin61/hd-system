@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Ver 3.5.3 遠距離スプリット対応版)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.5.4 激レア判定＆レイアウト完成版)
 # =====================================================================
 import streamlit as st
 import io
@@ -31,7 +31,6 @@ PLANET_JP = {
     "Neptune": "海王星", "Pluto": "冥王星", "Chiron": "キロン"
 }
 
-# 🌟 背景白（ライトモード）に映える深い赤色に変更
 st.markdown("""
 <style>
 pre {
@@ -41,6 +40,11 @@ pre {
 .unconscious-red {
     color: #D32F2F !important; 
     font-weight: bold;
+}
+.rare-alert {
+    color: #FFA000;
+    font-weight: bold;
+    font-size: 1.1em;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -150,6 +154,8 @@ GATE_TECH_MEANINGS = {
 }
 
 MOTOR_CENTERS = {"生命力", "意志", "感情", "活力"}
+# メンタルプロジェクター判定用（喉より下のモーター類＋自己中枢）
+LOWER_CENTERS = {"自己", "意志", "生命力", "直感", "感情", "活力"}
 
 # =====================================================================
 # ▼▼▼ 4. 天文暦のセットアップ ▼▼▼
@@ -278,17 +284,23 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                         if len(test_islands) > 0 and len(test_islands) < len(initial_islands):
                             b_gates_2.append((min(g1, g2), max(g1, g2)))
 
-    # 🌟修正：ワイドスプリットとクアッドスプリットの判定ロジック
+    # --- 激レア判定フラグ ---
+    is_rare = False
+    rare_message = ""
+
     if len(initial_islands) == 0:
         definition_type = "全感受型（レフレクター）"
+        is_rare = True
+        rare_message = "※全体人口のわずか1%未満の非常に稀な体質（レフレクター）です。"
     elif len(initial_islands) == 1:
         definition_type = "一体型（シングル定義）"
     elif len(initial_islands) == 2:
         if len(b_gates_1) > 0:
             definition_type = "二系統型（シンプル・スプリット）"
         else:
-            # 1つのゲートじゃ繋がらない、遠い2系統！
-            definition_type = "二系統型（ワイド・スプリット / 遠距離スプリット）"
+            definition_type = "二系統型（ブロード・スプリット / 遠距離スプリット）"
+            is_rare = True
+            rare_message = "※島が離れすぎている特殊なスプリット（ブロード・スプリット）をお持ちです。"
     elif len(initial_islands) == 3:
         definition_type = "三系統型（トリプル・スプリット）"
     elif len(initial_islands) == 4:
@@ -325,6 +337,10 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
             type_str = "行動開始型（マニフェスター）"
         elif len(on_c) > 0:
             type_str = "導き型（プロジェクター）"
+            # 🌟メンタル・プロジェクター判定（喉より下のセンターがすべてオフ）
+            if len(on_c.intersection(LOWER_CENTERS)) == 0:
+                is_rare = True
+                rare_message = "※喉から下の中枢がすべて未定義の特殊な体質（メンタル・プロジェクター）です。"
         else:
             type_str = "反射型（レフレクター）"
 
@@ -336,32 +352,21 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
+    # 🌟 トップにレア度アラートを表示！
+    if is_rare:
+        print(f"<span class='rare-alert'>★ 【特殊な状態を検出】かなり特殊な特徴をお持ちです。\n{rare_message}\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
+
     print(DIVIDER)
     print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
-    print(DIVIDER)
-
-    for p in PLANET_ORDER:
-        r = next((x for x in data if x["planet"] == p and x["color"] == "Red"), None)
-        b = next((x for x in data if x["planet"] == p and x["color"] == "Black"), None)
-        if r and b:
-            rs = calc_gate_score(r["gate"], p) if p != "Chiron" else 0.0
-            bs = calc_gate_score(b["gate"], p) if p != "Chiron" else 0.0
-
-            r_sc = f" [{rs:>4.1f}]" if rs > 0 else "       "
-            b_sc = f" [{bs:>4.1f}]" if bs > 0 else "       "
-
-            p_jp = PLANET_JP.get(p, p)
-
-            print(f"{p_jp}")
-            print(f"<span class='unconscious-red'>先天 {r['gate']:>2}.{r['line']}{r_sc}</span> ║ 後天 {b['gate']:>2}.{b['line']}{b_sc}\n")
-
-    # 🌟修正：表現と連動している〜をここ（トップ領域の最後）に移動し、余計な線を削除
     if connected_motors:
         motors_jp = "・".join(connected_motors)
-        print(f"💡 表現と連動している活力の源: {motors_jp}\n")
-        
+        print(f"💡 表現と連動している活力の源: {motors_jp}")
     print(DIVIDER)
-    print("🏥 身体の中枢別 エネルギー状態（扉の詳細）")
+
+    # 🌟【重要】惑星データ出力の削除（ここで出さずに一番下に移動するため）
+    # 元々ここにあった for p in PLANET_ORDER: のブロックを関数の一番最後に移動しました。
+        
+    print("\n🏥 身体の中枢別 エネルギー状態（扉の詳細）")
     print(DIVIDER)
     center_order = ["頭脳", "思考", "表現", "自己", "意志", "生命力", "直感", "感情", "活力"]
     for c in center_order:
@@ -392,7 +397,34 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                     print(f"ー 扉 {g:>2}.{line} {mean_str} ({p_jp}/後天){score_str}")
             print("")
 
+    # 必要なデータを戻り値として渡す（惑星データ出力関数用）
     return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands
+
+# 🌟【新規追加】惑星データを一番最後に出力するための専用関数
+def print_planet_data(data, on_c):
+    print("\n" + "=" * 35)
+    print("🔭 【詳細データ】各惑星と扉の対応表")
+    print("=" * 35)
+    def calc_score(gate, planet):
+        c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
+        if c in MOTOR_CENTERS:
+            return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
+        return 0.0
+
+    for p in PLANET_ORDER:
+        r = next((x for x in data if x["planet"] == p and x["color"] == "Red"), None)
+        b = next((x for x in data if x["planet"] == p and x["color"] == "Black"), None)
+        if r and b:
+            rs = calc_score(r["gate"], p) if p != "Chiron" else 0.0
+            bs = calc_score(b["gate"], p) if p != "Chiron" else 0.0
+
+            r_sc = f" [{rs:>4.1f}]" if rs > 0 else "       "
+            b_sc = f" [{bs:>4.1f}]" if bs > 0 else "       "
+
+            p_jp = PLANET_JP.get(p, p)
+
+            print(f"{p_jp}")
+            print(f"<span class='unconscious-red'>先天 {r['gate']:>2}.{r['line']}{r_sc}</span> ║ 後天 {b['gate']:>2}.{b['line']}{b_sc}\n")
 
 TECH_TYPE_STRENGTHS = {
     "生命力型（ジェネレーター）": "安定した生命力を持ち続けるエンジン体質。\n繰り返しの積み重ねで体と心を最高の状態へ整え、外からの呼びかけへの反応力が高い。",
@@ -449,7 +481,7 @@ CENTER_ISSUES = {
     },
     "直感": {
         "curse": "【外から植えつけられた思い込み】「石の上にも三年」「手放すのはもったいない」\n └ 「今離れると怖い」という古い恐れに縛られ、体や心に合わない環境に居続けてしまう。",
-        "truth": "【本来の体の仕組み】違参感を感じたら、過去に縛られずすぐに離れられる「体の警報装置」。",
+        "truth": "【本来の体の仕組み】違和感を感じたら、過去に縛られずすぐに離れられる「体の警報装置」。",
         "solution": "【心身を整えるための言葉】「なんとなく嫌な感じがする場所・人とは、すぐ距離を置いていい」"
     },
     "感情": {
@@ -545,11 +577,8 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
     print("\n【心身の統合状態（つながりの扉）】")
     print(f"構成タイプ: {def_type}")
 
-    # 🌟ワイドスプリット用の解説
-    if "ワイド" in def_type:
+    if "ブロード" in def_type:
         print(" └ 特徴: 島が遠く離れており、1つの扉では繋がりません。他者との関わりを通じて時間をかけて全体を統合していく体質です。")
-    elif "クアッド" in def_type:
-        print(" └ 特徴: 非常に珍しい4分裂の体質です。多くの人と関わり、様々な場所へ行くことでエネルギーが繋がります。")
 
     if len(islands) <= 1:
         print("🌟 橋渡しの扉: なし（全体がひとつにつながっています）")
@@ -561,7 +590,7 @@ def print_tech_spec_report(type_str, on_centers, gates, data, def_type, b_gates_
                 print(f"  - 扉 {g:>2} が開くと: 心身の断絶が消え、全体がひとつにつながります。")
         elif b_gates_2:
             combo_strs = [f"[{bg1}, {bg2}]" for bg1, bg2 in b_gates_2]
-            print(f"🌟 広域の橋渡しの扉 (ワイドスプリット用):\n   {', '.join(combo_strs)}")
+            print(f"🌟 広域の橋渡しの扉 (ブロード・スプリット用):\n   {', '.join(combo_strs)}")
 
     red_counts = {i: 0 for i in range(1, 7)}
     black_counts = {i: 0 for i in range(1, 7)}
@@ -634,10 +663,12 @@ if st.sidebar.button("🌿 体質診断を開始する"):
                 c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE
             )
             print_tech_spec_report(type_str, on_c, core_g, full_data, def_type, b_gates_1, b_gates_2, islands)
+            
+            # 🌟ここで一番最後に惑星データ（詳細）を出力します！
+            print_planet_data(full_data, on_c)
 
         html_content = f.getvalue()
 
-        # 🌟修正：背景色を白（#FFFFFF）、文字をダークグレー（#333333）に変更！
         html_style = (
             "background-color: #FFFFFF; color: #333333; padding: 1.5rem; border-radius: 0.5rem; "
             "border: 1px solid #DDDDDD; font-family: 'Hiragino Kaku Gothic Pro', 'Meiryo', monospace; "
