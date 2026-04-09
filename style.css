@@ -1,0 +1,40 @@
+/* =========================================
+   体質診断レポート (HD System) 共通スタイル
+   ========================================= */
+
+/* 1. 全体の基本設定（改行を反映させる） */
+pre {
+    white-space: pre-wrap !important;
+    word-wrap: break-word !important;
+    font-family: monospace, 'Hiragino Kaku Gothic Pro', 'Meiryo' !important;
+}
+
+/* 2. 無意識（先天）用の赤文字 */
+.unconscious-red {
+    color: #D32F2F !important; 
+    font-weight: bold;
+}
+
+/* 3. 特殊・レア判定用のアラート（目立つオレンジの枠） */
+.rare-alert {
+    color: #FFA000;
+    font-weight: bold;
+    font-size: 1.1em;
+    background-color: #FFF8E1;
+    padding: 10px 15px;
+    border-radius: 5px;
+    border-left: 5px solid #FFA000;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+/* 4. レポート全体を囲むカード型デザイン（白背景・角丸・影付き） */
+.card {
+    background-color: #FFFFFF;
+    color: #333333;
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid #E0E0E0;
+    box-shadow: 0px 4px 15px rgba(0,0,0,0.05); /* ふんわり優しい影 */
+    line-height: 1.8;
+}
