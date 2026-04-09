@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Ver 3.9 モーター供給連動スコア版)
+# タイトル: HD自作エンジン Webアプリ版 (Ver 3.9 CSS外部ファイル分離版)
 # =====================================================================
 import streamlit as st
 import io
@@ -14,6 +14,14 @@ import urllib.request
 # ▼▼▼ 1. 画面・見た目の設定 ▼▼▼
 # =====================================================================
 st.set_page_config(page_title="体質診断レポート", page_icon="👶", layout="wide", initial_sidebar_state="expanded")
+
+# 🌟 魔法の関数：外部のCSSファイルを読み込む
+def local_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
+
+# 同じフォルダにある style.css をアプリに適用！
+local_css("style.css")
 
 DIVIDER = "-" * 35
 
@@ -30,24 +38,6 @@ PLANET_JP = {
     "Jupiter": "木星", "Saturn": "土星", "Uranus": "天王星",
     "Neptune": "海王星", "Pluto": "冥王星", "Chiron": "キロン"
 }
-
-st.markdown("""
-<style>
-pre {
-    white-space: pre-wrap !important;
-    word-wrap: break-word !important;
-}
-.unconscious-red {
-    color: #D32F2F !important; 
-    font-weight: bold;
-}
-.rare-alert {
-    color: #FFA000;
-    font-weight: bold;
-    font-size: 1.1em;
-}
-</style>
-""", unsafe_allow_html=True)
 
 st.markdown("### **👶 体質・生命力 診断レポート**")
 st.markdown("<span style='font-size: 0.9em; color: gray;'>**生まれ持った体の仕組みと、心身のエネルギーの流れを読み解きます。**</span>", unsafe_allow_html=True)
@@ -257,18 +247,11 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     initial_islands = get_islands_for_gates(core_g, initial_on_c)
     on_c = initial_on_c
 
-    # 🌟 モーターから直接エネルギー供給を受けているセンターを特定（スコア計算用）
     energized_centers = set(MOTOR_CENTERS)
-    
-    # Gセンター(自己)がモーターと直結しているか判定
     if {25, 51}.issubset(core_g) or {5, 15}.issubset(core_g) or {2, 14}.issubset(core_g) or {29, 46}.issubset(core_g) or {34, 10}.issubset(core_g):
         energized_centers.add("自己")
-        
-    # 脾臓(直感)がモーターと直結しているか判定
     if {18, 58}.issubset(core_g) or {28, 38}.issubset(core_g) or {32, 54}.issubset(core_g) or {34, 57}.issubset(core_g) or {27, 50}.issubset(core_g) or {26, 44}.issubset(core_g):
         energized_centers.add("直感")
-        
-    # 喉(表現)がモーターと直結しているか判定
     if {34, 20}.issubset(core_g) or {12, 22}.issubset(core_g) or {35, 36}.issubset(core_g) or {21, 45}.issubset(core_g):
         energized_centers.add("表現")
 
@@ -353,7 +336,6 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
         else:
             type_str = "反射型"
 
-    # 🌟 モーター供給連動スコア計算（energized_centersを使用）
     def calc_gate_score(gate, planet):
         c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
         if c in energized_centers:
@@ -363,7 +345,8 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
     raw_s = sum([calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron"])
 
     if is_rare:
-        print(f"<span class='rare-alert'>★ 【特殊な特徴を検出】\n詳細はぜひHD資格のある専門家にお問合せください！</span>\n")
+        # style.css の .rare-alert クラスが適用されます
+        print(f"<div class='rare-alert'>★ 【特殊な特徴を検出】<br>詳細はぜひHD資格のある専門家にお問合せください！</div>\n")
 
     print(DIVIDER)
     print(f"🔋 自発エネルギー密度: {raw_s:.1f}")
@@ -387,7 +370,6 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
 
         print(f"\n■ **{c}**（{CENTER_ORGANS[c]}）\n")
         
-        # 🌟 頭脳と思考からは小計スコア表示を排除
         if c in ["頭脳", "思考"]:
             print(f"{status}\n")
         else:
@@ -408,10 +390,8 @@ def print_master_report(data, jd_d, y, m, d, h, mi):
                     print(f"\nー 扉 {g:>2} {mean_str} ({p_jp}/後天){score_str}")
             print("")
 
-    # energized_centersを惑星データ出力にも渡す
     return type_str, on_c, core_g, data, definition_type, b_gates_1, b_gates_2, initial_islands, energized_centers
 
-# 🌟 惑星データ出力でも動的スコア(energized_centers)を参照する
 def print_planet_data(data, on_c, energized_centers):
     print("\n" + "=" * 35)
     print("🔭 【詳細データ】各星と扉の対応表")
@@ -682,12 +662,8 @@ if st.sidebar.button("🌿 体質診断を開始する"):
 
         html_content = f.getvalue()
 
-        html_style = (
-            "background-color: #FFFFFF; color: #333333; padding: 1.5rem; border-radius: 0.5rem; "
-            "border: 1px solid #DDDDDD; font-family: monospace, 'Hiragino Kaku Gothic Pro', 'Meiryo'; "
-            "white-space: pre-wrap; word-wrap: break-word; line-height: 1.8; overflow-x: hidden;"
-        )
-        wrapped_html = f"<div style='{html_style}'>\n{html_content}\n</div>"
+        # 🌟 カードデザインクラス (.card) を適用！
+        wrapped_html = f"<div class='card'>\n{html_content}\n</div>"
 
         st.markdown(wrapped_html, unsafe_allow_html=True)
         st.success("診断が完了しました！")
