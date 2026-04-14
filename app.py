@@ -466,32 +466,38 @@ if 'report_data' in st.session_state:
     
     if "理系" in mode:
         title = "🚨 心身のバグ診断"
-        desc = "エラー（思い込み）にチェックを入れてください。システム稼働率が変動します。"
-        m_title = "システム稼働率"
+        desc = "エラー（思い込み）にチェックを入れてください。一番下でシステム稼働率が可視化されます。"
+        top_m_title = "本来のシステムスペック（MAX稼働）"
+        bottom_m_title = "現在の有効リソース（リアルタイム）"
         chk_lbl = "✖ システムエラー発生中"
     elif "中高生" in mode:
         title = "🚨 青春のモヤモヤ診断"
-        desc = "「あるある」にチェックを入れてね。自分らしさ全開度がわかるよ。"
-        m_title = "自分らしさ全開度"
+        desc = "「あるある」にチェックを入れてね。一番下でいまの自分らしさのパーセンテージがわかるよ。"
+        top_m_title = "本来のポテンシャル（最強の自分）"
+        bottom_m_title = "いま出せてる自分らしさ"
         chk_lbl = "✖ これにハマってる"
     else:
         title = "🚨 心身の歪み診断"
-        desc = "日常の不調（思い込み）にチェックを入れてください。エネルギーのブロックが視覚化されます。"
-        m_title = "本来のエネルギー発揮度"
+        desc = "日常の不調（思い込み）にチェックを入れてください。エネルギーのブロックが一番下で視覚化されます。"
+        top_m_title = "本来のエネルギーポテンシャル"
+        bottom_m_title = "現在のエネルギー発揮度"
         chk_lbl = "✖ 振り回されている"
 
     deducted = sum(rd['center_scores'][c] for c in CENTER_ORDER if st.session_state.get(f"chk_{c}", False))
     current_score = max(0, rd['total_score'] - deducted)
 
-    st.markdown(f"### 🔋 {m_title}: {current_score} / {rd['total_score']}")
-    blocks_html = f"<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
+    # 🌟 トップメーター（常にMAX固定で本来のポテンシャルを見せる！）
+    st.markdown(f"### 🔋 {top_m_title}: {rd['total_score']} / {rd['total_score']}")
+    blocks_html_top = f"<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
     for i in range(rd['total_score']):
-        bg = "#E53935" if "理系" in mode and i < current_score else ("#00BFFF" if i < current_score else "#CFD8DC")
-        blocks_html += f"<div style='width: 14px; height: 14px; background-color: {bg}; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
-    st.markdown(blocks_html + "</div>", unsafe_allow_html=True)
+        bg = "#E53935" if "理系" in mode else "#00BFFF"
+        blocks_html_top += f"<div style='width: 14px; height: 14px; background-color: {bg}; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
+    st.markdown(blocks_html_top + "</div>", unsafe_allow_html=True)
 
+    # 基本スペック表示
     st.markdown(f"<div class='card'>\n{rd['html_spec']}\n</div>", unsafe_allow_html=True)
 
+    # 🚨 診断セクション
     st.markdown(f"### {title}")
     st.info(desc)
     for c in CENTER_ORDER:
@@ -505,5 +511,25 @@ if 'report_data' in st.session_state:
             st.checkbox(lbl, key=f"chk_{c}")
             st.divider()
 
+    # 🌟 ボトムメーター（自己診断の現実（減点結果）を突きつける！）
+    st.markdown("---")
+    st.markdown(f"### 📉 {bottom_m_title}: {current_score} / {rd['total_score']}")
+    
+    # ⚠️ さらにギャップを感じさせるメッセージを追加
+    if deducted > 0:
+        if "理系" in mode:
+            st.warning(f"⚠️ エラーにより、本来のスペックから **{deducted} ポイント** のリソースがダウンしています。")
+        else:
+            st.warning(f"⚠️ Notself（思い込み）の影響で、本来のポテンシャルから **{deducted} ポイント** のエネルギーがブロックされています。")
+    else:
+        st.success("✨ 素晴らしい！本来のポテンシャルを100%発揮できています！")
+
+    blocks_html_bottom = f"<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
+    for i in range(rd['total_score']):
+        bg = "#E53935" if "理系" in mode and i < current_score else ("#00BFFF" if i < current_score else "#CFD8DC")
+        blocks_html_bottom += f"<div style='width: 14px; height: 14px; background-color: {bg}; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
+    st.markdown(blocks_html_bottom + "</div>", unsafe_allow_html=True)
+
+    # 専門家向けデータ展開
     with st.expander("▼ 【専門データ】ゲート・ライン・天体の詳細を開く"):
         st.markdown(f"<div class='card' style='background-color:#f8f9fa;'>\n{rd['html_expert']}\n</div>", unsafe_allow_html=True)
