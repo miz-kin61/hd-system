@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Notself連動 ＋ 翻訳モード切替版)
+# タイトル: HD自作エンジン Webアプリ版 (Notself連動 ＋ 翻訳モード完全切替版)
 # =====================================================================
 import streamlit as st
 import io
@@ -125,7 +125,7 @@ def get_dictionaries(mode):
 
 
 # =====================================================================
-# ▼▼▼ 固定の基礎データ群（ここは省略しません！） ▼▼▼
+# ▼▼▼ 固定の基礎データ群 ▼▼▼
 # =====================================================================
 CUSTOM_WEIGHTS = {"Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5, "NorthNode": 0.0, "SouthNode": 0.0, "Chiron": 0.0}
 DORMANT_MULTIPLIER = 0.3
@@ -149,7 +149,6 @@ CHANNELS = {
     "感情_活力": [(19,49,"19-49"), (39,55,"39-55"), (41,30,"41-30")], "直感_活力": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]
 }
 
-# 🌟みずきさん渾身のゲート解説（完全復活）
 GATE_TECH_MEANINGS = {
     1:  "【創造】 独自の生命表現を生み出す力", 2:  "【受容】 必要なものを自然に引き寄せる磁力",
     3:  "【秩序】 混乱した状態を整え形にする力", 4:  "【答え】 不調の原因を論理的に見つける力",
@@ -288,7 +287,6 @@ def get_islands_for_gates(test_gates, defined_centers):
     return isls
 
 def generate_report_data(data, jd_d, y, m, d, h, mi, display_mode):
-    # 選択されたモードの辞書を取得
     T_TYPE, T_CENTER, T_DEF_CENTER = get_dictionaries(display_mode)
 
     dv = swe.revjul(jd_d)
@@ -423,7 +421,7 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, display_mode):
             if c in ["頭脳", "思考"]: print(f"{status}\n")
             else: print(f"{status}  [小計: {center_scores[c]} 🔋]\n")
 
-    # ===== 🌟 完全復活 HTML: 専門家向けフルデータ 🌟 =====
+    # ===== HTML: 専門家向けフルデータ =====
     exp_f = io.StringIO()
     with contextlib.redirect_stdout(exp_f):
         print(f"【受胎十字 (インカネーションクロス)】\n")
@@ -510,43 +508,9 @@ if 'report_data' in st.session_state:
     rd = st.session_state['report_data']
     total_score = rd['total_score']
     
-    st.info(f"現在の翻訳モード: **{st.session_state.get('current_mode', 'やさしい言葉モード')}**")
-
-    deducted = sum(rd['center_scores'][c] for c in CENTER_ORDER if st.session_state.get(f"chk_{c}", False))
-    current_score = max(0, total_score - deducted)
-
-    st.markdown(f"### 🔋 本来のエネルギー発揮度: {current_score} / {total_score}")
-    blocks_html = "<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
-    for i in range(total_score):
-        bg = "#E53935" if "理系" in st.session_state.get('current_mode', '') and i < current_score else ("#00BFFF" if i < current_score else "#CFD8DC")
-        blocks_html += f"<div style='width: 14px; height: 14px; background-color: {bg}; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
-    blocks_html += "</div>"
-    st.markdown(blocks_html, unsafe_allow_html=True)
+    # 🌟 モードによるUI文字の完全切り替え 🌟
+    is_tech_mode = "理系" in st.session_state.get('current_mode', '')
     
-    st.markdown(f"<div class='card'>\n{rd['html_spec']}\n</div>", unsafe_allow_html=True)
-    
-    st.markdown("### 🚨 心身のバグ診断（Notself自己採点）")
-    st.info("💡 日常の中で感じるエラー（思い込み）にチェックを入れてください。システムがどれだけダウンしているか、上のメーターが減衰します。")
-    
-    for c in CENTER_ORDER:
-        with st.container():
-            st.markdown(f"#### ■ **{c}**（{CENTER_ORGANS[c]}）")
-            if c in rd['off_centers']:
-                st.markdown(f"**{rd['T_CENTER'][c]['curse']}**")
-                st.markdown(f"*{rd['T_CENTER'][c]['truth']}*")
-                st.markdown(f"`{rd['T_CENTER'][c]['solution']}`")
-            else:
-                st.markdown("**(安定稼働中)**")
-                st.markdown(f"**{rd['T_DEF_CENTER'][c]['curse']}**")
-                st.markdown(f"*{rd['T_DEF_CENTER'][c]['truth']}*")
-                st.markdown(f"`{rd['T_DEF_CENTER'][c]['solution']}`")
-            
-            pts = rd['center_scores'][c]
-            lbl = f"✖ 最近このエラーが発生している（システムダウン -{pts}）" if pts > 0 else "✖ 最近このエラーが発生している"
-            st.checkbox(lbl, key=f"chk_{c}")
-            st.divider()
-
-    st.markdown(f"<div class='card'>\n{rd['html_overview']}\n</div>", unsafe_allow_html=True)
-
-    with st.expander("▼ 【専門データ】ゲート・ライン・天体の詳細を開く"):
-        st.markdown(f"<div class='card' style='background-color:#f8f9fa;'>\n{rd['html_expert']}\n</div>", unsafe_allow_html=True)
+    if is_tech_mode:
+        ui_notself_title = "### 🚨 心身のバグ診断（エラー自己検出）"
+        ui_notself_desc = "💡 日常の中で発生しているエラー（思い込み）
