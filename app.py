@@ -116,7 +116,7 @@ def get_dictionaries(mode):
 # =====================================================================
 CUSTOM_WEIGHTS = {"Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5, "NorthNode": 1.0, "SouthNode": 1.0, "Chiron": 0.0}
 DORMANT_MULTIPLIER = 0.3
-FORCED_GATES = set()  # ← 🚨🚨 犯人はここだ！！復活しました！！🚨🚨
+FORCED_GATES = set()
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
 CENTER_GATES = {"頭脳": {64, 61, 63}, "思考": {47, 24, 4, 17, 43, 11}, "表現": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "自己": {7, 1, 13, 25, 46, 2, 15, 10}, "意志": {21, 51, 26, 40}, "生命力": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "直感": {48, 57, 44, 50, 32, 28, 18}, "感情": {36, 22, 37, 6, 49, 55, 30}, "活力": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
 CHANNELS = {"頭脳_思考": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")], "思考_表現": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")], "表現_自己": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")], "表現_意志": [(45,21,"45-21")], "表現_感情": [(35,36,"35-36"), (12,22,"12-22")], "表現_直感": [(16,48,"16-48"), (20,57,"20-57")], "表現_生命力": [(20,34,"20-34")], "自己_意志": [(25,51,"25-51")], "自己_生命力": [(5,15,"5-15"), (46,29,"46-29"), (2,14,"2-14"), (10,34,"10-34")], "自己_直感": [(10,57,"10-57")], "意志_感情": [(40,37,"40-37")], "意志_直感": [(26,44,"26-44")], "生命力_感情": [(6,59,"6-59")], "生命力_直感": [(50,27,"50-27"), (34,57,"34-57")], "生命力_活力": [(53,42,"53-42"), (3,60,"3-60"), (9,52,"9-52")], "感情_活力": [(19,49,"19-49"), (39,55,"39-55"), (41,30,"41-30")], "直感_活力": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]}
@@ -205,7 +205,7 @@ def get_chart_data(y, m, d, h, mi):
     sun_pos, _ = swe.calc_ut(jd_b, swe.SUN)
     jd_d = calculate_design_jd(jd_b, sun_pos[0])
     data = []
-    planets = {swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode", swe.MERCURY: "Mercury", swe.VENUS: "Venus", swe.MARS: "Mars", swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus", swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"}
+    planets = {swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode", swe.MERCURY: "Mercury", swe.VENUS: "Venus", "Mars": "Mars", swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus", swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"}
     for is_red, jd in [(True, jd_d), (False, jd_b)]:
         col = "Red" if is_red else "Black"
         for p_id, p_name in planets.items():
@@ -270,7 +270,7 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
 
-    # 🌟 スコア計算（未定義センターは一律5ポイント）
+    # 🌟【完全修正版】スコア計算ロジック（0点撲滅！）
     center_scores = {}
     total_score = 0
     for c in CENTER_ORDER:
@@ -278,9 +278,11 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
         c_int = int(round(c_score))
         
         if c in off_centers:
-            c_int = max(c_int, 5) # 白いセンターは漏電5点
-        elif c_score > 0 and c_int == 0:
-            c_int = 1
+            # 未定義（白）の場合：漏電として最低「5ポイント」
+            c_int = max(c_int, 5)
+        else:
+            # 定義済（色つき）の場合：0点にならないよう、本来の器として最低「10ポイント」を保証
+            c_int = max(c_int, 10)
             
         center_scores[c] = c_int
         total_score += c_int
