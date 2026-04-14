@@ -121,7 +121,7 @@ def get_dictionaries(mode):
 # =====================================================================
 # ▼▼▼ 4. 固定データ群（省略なし！） ▼▼▼
 # =====================================================================
-CUSTOM_WEIGHTS = {"Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5, "NorthNode": 0.0, "SouthNode": 0.0, "Chiron": 0.0}
+CUSTOM_WEIGHTS = {"Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5, "NorthNode": 1.0, "SouthNode": 1.0, "Chiron": 0.0}
 DORMANT_MULTIPLIER = 0.3
 FORCED_GATES = set()
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
@@ -356,13 +356,19 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
     
-    center_scores = {}
+center_scores = {}
     total_score = 0
     for c in CENTER_ORDER:
         c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
-        center_scores[c] = int(c_score)
-        total_score += int(c_score)
-
+        
+        # ▼ ここを修正！(四捨五入しつつ、最低1ポイントは保証する)
+        c_int = int(round(c_score))
+        if c_score > 0 and c_int == 0:
+            c_int = 1
+            
+        center_scores[c] = c_int
+        total_score += c_int
+        
     all_centers = set(CENTER_GATES.keys())
     off_centers = all_centers - set(on_c)
     full_open = [c for c in off_centers if len(CENTER_GATES[c] & set(core_g)) == 0]
