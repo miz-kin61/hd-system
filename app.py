@@ -1,82 +1,150 @@
 # =====================================================================
-# ▼▼▼ 5. 計算・出力のロジック (統合＆順番最適化版) ▼▼▼
+# タイトル: HD自作エンジン Webアプリ版 (フロント・マニア分離版)
 # =====================================================================
-def get_gate_and_line(lon):
-    offset = (lon - 302.0 + 360.0) % 360.0
-    return GATE_SEQUENCE[int(offset / 5.625)], int((offset % 5.625) / (5.625 / 6)) + 1
+import streamlit as st
+import io
+import contextlib
+import swisseph as swe
+import datetime
+import collections
+import os
+import urllib.request
 
-def calculate_design_jd(jd_b, sun_lon):
-    target = (sun_lon - 88.0 + 360.0) % 360.0
-    jd_guess = jd_b - 89.5
-    for _ in range(20):
-        pos, _ = swe.calc_ut(jd_guess, swe.SUN)
-        diff = (pos[0] - target + 360.0) % 360.0
-        if diff > 180: diff -= 360.0
-        jd_guess -= diff / 0.9856
-        if abs(diff) < 0.00001: break
-    return jd_guess
+# =====================================================================
+# ▼▼▼ 1. 画面・見た目の設定 ▼▼▼
+# =====================================================================
+st.set_page_config(page_title="体質診断レポート", page_icon="👶", layout="wide", initial_sidebar_state="expanded")
 
-def get_chart_data(y, m, d, h, mi):
-    utc = datetime.datetime(y, m, d, h, mi) - datetime.timedelta(hours=9)
-    jd_b = swe.julday(utc.year, utc.month, utc.day, utc.hour + utc.minute / 60.0)
-    sun_pos, _ = swe.calc_ut(jd_b, swe.SUN)
-    jd_d = calculate_design_jd(jd_b, sun_pos[0])
-    data = []
-    planets = {
-        swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode",
-        swe.MERCURY: "Mercury", swe.VENUS: "Venus", swe.MARS: "Mars",
-        swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus",
-        swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"
-    }
-    for is_red, jd in [(True, jd_d), (False, jd_b)]:
-        col = "Red" if is_red else "Black"
-        for p_id, p_name in planets.items():
-            pos, _ = swe.calc_ut(jd, p_id)
-            g, l = get_gate_and_line(pos[0])
-            data.append({"planet": p_name, "color": col, "gate": g, "line": l})
-            if p_name == "Sun":
-                eg, el = get_gate_and_line((pos[0] + 180) % 360)
-                data.append({"planet": "Earth", "color": col, "gate": eg, "line": el})
-            if p_name == "NorthNode":
-                sg, sl = get_gate_and_line((pos[0] + 180) % 360)
-                data.append({"planet": "SouthNode", "color": col, "gate": sg, "line": sl})
-    return data, jd_d
+def local_css(file_name):
+    if os.path.exists(file_name):
+        with open(file_name) as f:
+            st.markdown(f'<style>{f.read()}</style>', unsafe_allow_html=True)
 
-def get_defined_centers(test_gates):
-    on_c = set()
-    for r, cs in CHANNELS.items():
-        c1, c2 = r.split('_')
-        for g1, g2, cid in cs:
-            if g1 in test_gates and g2 in test_gates:
-                on_c.update([c1, c2])
-    return on_c
+local_css("style.css")
 
-def get_islands_for_gates(test_gates, defined_centers):
-    adj = collections.defaultdict(list)
-    for r, cs in CHANNELS.items():
-        c1, c2 = r.split('_')
-        for g1, g2, cid in cs:
-            if g1 in test_gates and g2 in test_gates:
-                adj[c1].append(c2)
-                adj[c2].append(c1)
-    isls = []
-    visited = set()
-    for c in defined_centers:
-        if c not in visited:
-            isl = set()
-            q = [c]
-            while q:
-                curr = q.pop(0)
-                if curr not in visited:
-                    visited.add(curr)
-                    isl.add(curr)
-                    q.extend([n for n in adj[curr] if n in defined_centers and n not in visited])
-            isls.append(isl)
-    return isls
+DIVIDER = "-" * 35
 
-# ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
-# ⚠️前回消してしまった「テキスト辞書データ」を復活！
-# ＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+PLANET_ORDER = [
+    "Sun", "Earth", "Moon", "NorthNode", "SouthNode",
+    "Mercury", "Venus", "Mars", "Jupiter", "Saturn",
+    "Uranus", "Neptune", "Pluto", "Chiron"
+]
+
+PLANET_JP = {
+    "Sun": "太陽", "Earth": "地球", "Moon": "月",
+    "NorthNode": "北の交点", "SouthNode": "南の交点",
+    "Mercury": "水星", "Venus": "金星", "Mars": "火星",
+    "Jupiter": "木星", "Saturn": "土星", "Uranus": "天王星",
+    "Neptune": "海王星", "Pluto": "冥王星", "Chiron": "キロン"
+}
+
+st.markdown("### **👶 体質・生命力 診断レポート**")
+st.markdown("<span style='font-size: 0.9em; color: gray;'>**生まれ持った体の仕組みと、心身のエネルギーの流れを読み解きます。**</span>", unsafe_allow_html=True)
+
+# =====================================================================
+# ▼▼▼ 2. 左側メニュー: 情報の入力欄 ▼▼▼
+# =====================================================================
+st.sidebar.header("▼ 生年月日の入力 (日本時間)")
+
+input_date = st.sidebar.date_input(
+    "生年月日", 
+    value=datetime.date(1980, 1, 1),
+    min_value=datetime.date(1920, 1, 1),
+    max_value=datetime.date.today()
+)
+
+st.sidebar.markdown("生まれた時刻")
+col1, col2 = st.sidebar.columns(2)
+HOUR = col1.selectbox("時", range(24), index=12)
+MINUTE = col2.selectbox("分", range(60), index=30)
+
+YEAR = input_date.year
+MONTH = input_date.month
+DAY = input_date.day
+
+# =====================================================================
+# ▼▼▼ 3. 各種データ・辞書の定義 ▼▼▼
+# =====================================================================
+CUSTOM_WEIGHTS = {
+    "Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0,
+    "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5,
+    "NorthNode": 0.0, "SouthNode": 0.0, "Chiron": 0.0
+}
+DORMANT_MULTIPLIER = 0.3
+FORCED_GATES = set()
+
+GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
+
+CENTER_GATES = {
+    "頭脳": {64, 61, 63}, "思考": {47, 24, 4, 17, 43, 11}, "表現": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45},
+    "自己": {7, 1, 13, 25, 46, 2, 15, 10}, "意志": {21, 51, 26, 40}, "生命力": {34, 5, 14, 29, 59, 9, 3, 42, 27},
+    "直感": {48, 57, 44, 50, 32, 28, 18}, "感情": {36, 22, 37, 6, 49, 55, 30}, "活力": {58, 38, 54, 53, 60, 52, 19, 39, 41}
+}
+
+CENTER_ORGANS = {
+    "頭脳": "松果体", "思考": "脳下垂体", "表現": "甲状腺・副甲状腺",
+    "自己": "肝臓・血液", "意志": "心臓・胸腺・胆嚢", "生命力": "卵巣・精巣",
+    "直感": "脾臓・リンパ系", "感情": "膵臓・腎臓・神経系", "活力": "副腎"
+}
+
+CHANNELS = {
+    "頭脳_思考": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")],
+    "思考_表現": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")],
+    "表現_自己": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")],
+    "表現_意志": [(45,21,"45-21")],
+    "表現_感情": [(35,36,"35-36"), (12,22,"12-22")],
+    "表現_直感": [(16,48,"16-48"), (20,57,"20-57")],
+    "表現_生命力": [(20,34,"20-34")],
+    "自己_意志": [(25,51,"25-51")],
+    "自己_生命力": [(5,15,"5-15"), (46,29,"46-29"), (2,14,"2-14"), (10,34,"10-34")],
+    "自己_直感": [(10,57,"10-57")],
+    "意志_感情": [(40,37,"40-37")],
+    "意志_直感": [(26,44,"26-44")],
+    "生命力_感情": [(6,59,"6-59")],
+    "生命力_直感": [(50,27,"50-27"), (34,57,"34-57")],
+    "生命力_活力": [(53,42,"53-42"), (3,60,"3-60"), (9,52,"9-52")],
+    "感情_活力": [(19,49,"19-49"), (39,55,"39-55"), (41,30,"41-30")],
+    "直感_活力": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]
+}
+
+GATE_TECH_MEANINGS = {
+    1:  "【創造】 独自の生命表現を生み出す力", 2:  "【受容】 必要なものを自然に引き寄せる磁力",
+    3:  "【秩序】 混乱した状態を整え形にする力", 4:  "【答え】 不調の原因を論理的に見つける力",
+    5:  "【待機】 安定したリズムで体を動かす力", 6:  "【摩擦】 ぶつかりながら境界線を整える力",
+    7:  "【役割】 未来の体の在り方を設計する力", 8:  "【貢献】 独自のビジョンを外へ伝える力",
+    9:  "【集中】 細部まで丁寧に注意を向ける力", 10: "【自己行動】 自分らしさを土台にした生き方",
+    11: "【思想】 無数のアイデアを心の中で育てる力", 12: "【慎重】 適切なタイミングで言葉を発する力",
+    13: "【聞く】 過去の記憶を丁寧に聞き取る力", 14: "【技術】 豊かさを大きく広げる増幅の力",
+    15: "【柔軟】 さまざまな環境に自然に溶け込む力", 16: "【練習】 繰り返しによって精度を高める力",
+    17: "【意見】 筋道立てて物事を組み立てる力", 18: "【修正】 既存の仕組みの問題を見つけ直す力",
+    19: "【感知】 必要な環境を察知する感受性", 20: "【今】 今この瞬間の状況を的確に伝える力",
+    21: "【統制】 資源を中心で束ねて管理する力", 22: "【開放】 感情を優雅に外へ表現する力",
+    23: "【同化】 複雑なものをシンプルに伝える力", 24: "【帰還】 繰り返し内省して最善解を見つける力",
+    25: "【純粋な愛】 見返りを求めない愛を広げる力", 26: "【効率】 少ない力で大きな成果を引き出す力",
+    27: "【養育】 他者の体と心を整え支える力", 28: "【挑戦】 限界まで試して突き抜ける力",
+    29: "【肯定】 全力で取り組み完遂する力", 30: "【体験】 新しい体験への入口を開く力",
+    31: "【影響力】 論理的に周囲を導くリーダーの力", 32: "【継続】 長く受け継がれてきた価値を守る力",
+    33: "【振り返り】 過去の記録を整理し蓄える力", 34: "【力】 自立して動く主エネルギーの馬力",
+    35: "【変化】 新しい体験を積み重ねて前進する力", 36: "【危機突破】 未知の困難を乗り越えて処理する力",
+    37: "【絆】 共同体の中で資源を分かち合う力", 38: "【抵抗】 目的を守るための粘り強い防衛力",
+    39: "【刺激】 停滞を突き動かして変化を促す力", 40: "【孤独】 一人の時間で体を回復させる力",
+    41: "【始まり】 新しい取り組みの最初の一歩", 42: "【完成】 始まったことを最後まで育てる力",
+    43: "【洞察】 突然ひらめく独創的な気づきの力", 44: "【警戒】 過去の記憶から危険を読み取る力",
+    45: "【まとめ役】 資源を集め管理する力", 46: "【体との一致】 物理的な環境と完全に同調する力",
+    47: "【解析】 過去の経験に意味を見出す力", 48: "【深い知恵】 蓄積された知識の奥から引き出す力",
+    49: "【刷新】 不要な関係を断ち切り作り直す力", 50: "【価値観】 全体の安全を守る共通の規範",
+    51: "【衝撃】 驚きによって体と心を再起動させる力", 52: "【静止】 深く集中するための静止の力",
+    53: "【開始】 新しい取り組みを動かし始める力", 54: "【向上心】 上の段階へ自らを押し上げる力",
+    55: "【豊かさ】 感情の波を通じて豊かさを育てる力", 56: "【語り】 体験を物語にして届ける力",
+    57: "【直感】 今この瞬間の危険を即座に察知する力", 58: "【生きがい】 体を整え続ける持続的な生命力",
+    59: "【親密さ】 心の壁を越えてつながる力", 60: "【制限の中で生きる】 制約の中で確実に前進する力",
+    61: "【神秘】 未知の真理へ触れようとする力", 62: "【細部】 細かいところまで正確に記述する力",
+    63: "【問い】 論理的な矛盾を見つけ問い直す力", 64: "【混沌の整理】 整理されていない記憶を受け止める力"
+}
+
+MOTOR_CENTERS = {"生命力", "意志", "感情", "活力"}
+LOWER_CENTERS = {"自己", "意志", "生命力", "直感", "感情", "活力"}
+
 TECH_TYPE_STRENGTHS = {
     "生命力型": "安定した生命力を持ち続けるエンジン体質。\n繰り返しの積み重ねで体と心を最高の状態へ整え、外からの呼びかけへの反応力が高い。",
     "表現する生命型": "複数のことを同時にこなす多機能型の体質。\n試行錯誤しながら最短の道を直感で見つける、素早い行動力を持つ。",
@@ -210,9 +278,96 @@ PROFILE_TECH_MEANINGS = {
     "6/3": "【全体と実践の人】 自ら困難に飛び込み（3）ながら、どこか俯瞰した目（6）で限界を見極め続ける探求者。"
 }
 
+# =====================================================================
+# ▼▼▼ 4. 天文暦のセットアップ ▼▼▼
+# =====================================================================
+ephe_dir = './ephe_data'
+os.makedirs(ephe_dir, exist_ok=True)
+files = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']
+base_url = 'https://github.com/aloistr/swisseph/raw/master/ephe/'
+for f in files:
+    if not os.path.exists(os.path.join(ephe_dir, f)):
+        urllib.request.urlretrieve(base_url + f, os.path.join(ephe_dir, f))
+swe.set_ephe_path(ephe_dir)
+
+# =====================================================================
+# ▼▼▼ 5. 計算・出力のロジック (統合＆順番最適化版) ▼▼▼
+# =====================================================================
+def get_gate_and_line(lon):
+    offset = (lon - 302.0 + 360.0) % 360.0
+    return GATE_SEQUENCE[int(offset / 5.625)], int((offset % 5.625) / (5.625 / 6)) + 1
+
+def calculate_design_jd(jd_b, sun_lon):
+    target = (sun_lon - 88.0 + 360.0) % 360.0
+    jd_guess = jd_b - 89.5
+    for _ in range(20):
+        pos, _ = swe.calc_ut(jd_guess, swe.SUN)
+        diff = (pos[0] - target + 360.0) % 360.0
+        if diff > 180: diff -= 360.0
+        jd_guess -= diff / 0.9856
+        if abs(diff) < 0.00001: break
+    return jd_guess
+
+def get_chart_data(y, m, d, h, mi):
+    utc = datetime.datetime(y, m, d, h, mi) - datetime.timedelta(hours=9)
+    jd_b = swe.julday(utc.year, utc.month, utc.day, utc.hour + utc.minute / 60.0)
+    sun_pos, _ = swe.calc_ut(jd_b, swe.SUN)
+    jd_d = calculate_design_jd(jd_b, sun_pos[0])
+    data = []
+    planets = {
+        swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode",
+        swe.MERCURY: "Mercury", swe.VENUS: "Venus", swe.MARS: "Mars",
+        swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus",
+        swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"
+    }
+    for is_red, jd in [(True, jd_d), (False, jd_b)]:
+        col = "Red" if is_red else "Black"
+        for p_id, p_name in planets.items():
+            pos, _ = swe.calc_ut(jd, p_id)
+            g, l = get_gate_and_line(pos[0])
+            data.append({"planet": p_name, "color": col, "gate": g, "line": l})
+            if p_name == "Sun":
+                eg, el = get_gate_and_line((pos[0] + 180) % 360)
+                data.append({"planet": "Earth", "color": col, "gate": eg, "line": el})
+            if p_name == "NorthNode":
+                sg, sl = get_gate_and_line((pos[0] + 180) % 360)
+                data.append({"planet": "SouthNode", "color": col, "gate": sg, "line": sl})
+    return data, jd_d
+
+def get_defined_centers(test_gates):
+    on_c = set()
+    for r, cs in CHANNELS.items():
+        c1, c2 = r.split('_')
+        for g1, g2, cid in cs:
+            if g1 in test_gates and g2 in test_gates:
+                on_c.update([c1, c2])
+    return on_c
+
+def get_islands_for_gates(test_gates, defined_centers):
+    adj = collections.defaultdict(list)
+    for r, cs in CHANNELS.items():
+        c1, c2 = r.split('_')
+        for g1, g2, cid in cs:
+            if g1 in test_gates and g2 in test_gates:
+                adj[c1].append(c2)
+                adj[c2].append(c1)
+    isls = []
+    visited = set()
+    for c in defined_centers:
+        if c not in visited:
+            isl = set()
+            q = [c]
+            while q:
+                curr = q.pop(0)
+                if curr not in visited:
+                    visited.add(curr)
+                    isl.add(curr)
+                    q.extend([n for n in adj[curr] if n in defined_centers and n not in visited])
+            isls.append(isl)
+    return isls
+
 # 🌟 全ての計算と出力を「一般向け」と「専門向け」に分けた最強の関数
 def generate_reports(data, jd_d, y, m, d, h, mi):
-    # --- 前半：全ての計算処理 ---
     dv = swe.revjul(jd_d)
     dj = datetime.datetime(int(dv[0]), int(dv[1]), int(dv[2]), int(dv[3]), int((dv[3] % 1) * 60)) + datetime.timedelta(hours=9)
     
@@ -456,7 +611,7 @@ if st.sidebar.button("🌿 体質診断を開始する"):
         st.markdown(f"<div class='card'>\n{general_html}\n</div>", unsafe_allow_html=True)
         
         # 🌟 専門データは画面の一番下で「折りたたみ（アコーディオン）」にする！
-        with st.expander("▼ 【専門データ】ゲート・ライン・天体の詳細設定を開く"):
+        with st.expander("▼ 【専門データ】ゲート・ライン・天体の詳細を開く"):
             st.markdown(f"<div class='card' style='background-color:#f8f9fa;'>\n{expert_html}\n</div>", unsafe_allow_html=True)
 
         st.success("診断が完了しました！")
