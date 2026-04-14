@@ -1,17 +1,25 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (完全完成版)
+# タイトル: HD自作エンジン Webアプリ版 (エラー修正完全版)
 # =====================================================================
 import streamlit as st
 import io
 import contextlib
-import swisseph as swe
 import datetime
 import collections
 import os
 import urllib.request
-
+ 
+# swissephのインポートとエラーハンドリング
+try:
+    import swisseph as swe
+    SWE_AVAILABLE = True
+except ImportError:
+    st.error("⚠️ swisseph ライブラリがインストールされていません。`pip install pyswisseph` を実行してください。")
+    SWE_AVAILABLE = False
+    st.stop()
+ 
 st.set_page_config(page_title="体質診断レポート", page_icon="👶", layout="wide", initial_sidebar_state="expanded")
-
+ 
 # 🌟 CSSスタイル設定
 st.markdown("""
 <style>
@@ -22,20 +30,26 @@ st.markdown("""
     .rare-alert { background-color: #FFF9C4; padding: 10px; border-radius: 5px; border-left: 5px solid #FBC02D; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
-
+ 
 DIVIDER = "-" * 35
-
+ 
 PLANET_ORDER = ["Sun", "Earth", "Moon", "NorthNode", "SouthNode", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Uranus", "Neptune", "Pluto", "Chiron"]
 PLANET_JP = {"Sun": "太陽", "Earth": "地球", "Moon": "月", "NorthNode": "北の交点", "SouthNode": "南の交点", "Mercury": "水星", "Venus": "金星", "Mars": "火星", "Jupiter": "木星", "Saturn": "土星", "Uranus": "天王星", "Neptune": "海王星", "Pluto": "冥王星", "Chiron": "キロン"}
 CENTER_ORDER = ["頭脳", "思考", "表現", "自己", "意志", "生命力", "直感", "感情", "活力"]
-
+ 
 def reset_state():
+    """セッション状態をリセット"""
     for c in CENTER_ORDER:
         st.session_state[f"chk_{c}"] = False
-
+ 
+# セッション状態の初期化
+if 'initialized' not in st.session_state:
+    st.session_state['initialized'] = True
+    reset_state()
+ 
 st.markdown("### **👶 身体の働き・活力 診断レポート**")
 st.markdown("<span style='font-size: 0.9em; color: gray;'>**持って生まれた器と、心身の活力の流れを読み解きます。**</span>", unsafe_allow_html=True)
-
+ 
 # =====================================================================
 # ▼▼▼ 翻訳辞書（全モード・省略なし完全版） ▼▼▼
 # =====================================================================
@@ -97,7 +111,7 @@ def get_dictionaries(mode):
             "感情": {"curse": "🌀 【思い込み】「自分の気持ちを押し込めて『いい人』を演じ続け、消耗する」", "truth": "✨ 【本来の強み】他者の感情の波を感じながら、そっと観察できる「共感の受信機」。", "solution": "💡 【整える言葉】「この感情の波は、誰かのもの。私はただ感じているだけでいい」"},
             "活力": {"curse": "🌀 【思い込み】「外からのプレッシャーで常に焦らされ、体が休まらなくなる」", "truth": "✨ 【本来の強み】外からのせかしをやり過ごし、自分のペースで動ける「独立した活力の源」。", "solution": "💡 【整える言葉】「急いでも物事は変わらない。他人の焦りは受け取らない」"}
         }
-
+ 
     DEFINED_CENTER_ISSUES_BASE = {
         "頭脳": {"curse": "🌀 【外からの思い込み】「他人の悩みにも関心を持て」", "truth": "✨ 【本来の仕組み】自分に必要な気づきだけを受け取る。", "solution": "👉 【整える言葉】「他人の悩みを自分の中に入れない。」"},
         "思考": {"curse": "🌀 【外からの思い込み】「もっと柔軟になれ」", "truth": "✨ 【本来の仕組み】一定のやり方で確実に情報を処理する。", "solution": "👉 【整える言葉】「私の考え方は生まれつきの仕様。」"},
@@ -110,7 +124,7 @@ def get_dictionaries(mode):
         "活力": {"curse": "🌀 【外からの思い込み】「焦らなくていい」", "truth": "✨ 【本来の仕組み】自らプレッシャーを生み出し、一気に処理する。", "solution": "👉 【整える言葉】「プレッシャーは私の力の源です」"}
     }
     return type_strengths, center_issues, DEFINED_CENTER_ISSUES_BASE
-
+ 
 # =====================================================================
 # ▼▼▼ 固定データ群（省略なし完全版） ▼▼▼
 # =====================================================================
@@ -121,7 +135,7 @@ GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 
 CENTER_GATES = {"頭脳": {64, 61, 63}, "思考": {47, 24, 4, 17, 43, 11}, "表現": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "自己": {7, 1, 13, 25, 46, 2, 15, 10}, "意志": {21, 51, 26, 40}, "生命力": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "直感": {48, 57, 44, 50, 32, 28, 18}, "感情": {36, 22, 37, 6, 49, 55, 30}, "活力": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
 CHANNELS = {"頭脳_思考": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")], "思考_表現": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")], "表現_自己": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")], "表現_意志": [(45,21,"45-21")], "表現_感情": [(35,36,"35-36"), (12,22,"12-22")], "表現_直感": [(16,48,"16-48"), (20,57,"20-57")], "表現_生命力": [(20,34,"20-34")], "自己_意志": [(25,51,"25-51")], "自己_生命力": [(5,15,"5-15"), (46,29,"46-29"), (2,14,"2-14"), (10,34,"10-34")], "自己_直感": [(10,57,"10-57")], "意志_感情": [(40,37,"40-37")], "意志_直感": [(26,44,"26-44")], "生命力_感情": [(6,59,"6-59")], "生命力_直感": [(50,27,"50-27"), (34,57,"34-57")], "生命力_活力": [(53,42,"53-42"), (3,60,"3-60"), (9,52,"9-52")], "感情_活力": [(19,49,"19-49"), (39,55,"39-55"), (41,30,"41-30")], "直感_活力": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]}
 MOTOR_CENTERS = {"生命力", "意志", "感情", "活力"}
-
+ 
 GATE_TECH_MEANINGS = {
     1:  "【創造】 独自の生命表現を生み出す力", 2:  "【受容】 必要なものを自然に引き寄せる磁力",
     3:  "【秩序】 混乱した状態を整え形にする力", 4:  "【答え】 不調の原因を論理的に見つける力",
@@ -156,7 +170,7 @@ GATE_TECH_MEANINGS = {
     61: "【神秘】 未知の真理へ触れようとする力", 62: "【細部】 細かいところまで正確に記述する力",
     63: "【問い】 論理的な矛盾を見つけ問い直す力", 64: "【混沌の整理】 整理されていない記憶を受け止める力"
 }
-
+ 
 PROFILE_TECH_MEANINGS = {
     "1/3": "【探求と実践の人】 基礎をしっかり学んで（1）、試行錯誤で体当たりしながら（3）前進する実力派。",
     "1/4": "【知識と縁の人】 深い知識を積み上げて（1）、信頼できる身近な縁（4）を通じてその力を広げる。",
@@ -171,167 +185,266 @@ PROFILE_TECH_MEANINGS = {
     "6/2": "【全体と才能の人】 生まれ持った才能（2）を持ちながら、全体の流れを俯瞰（6）して整える監督役。",
     "6/3": "【全体と実践の人】 自ら困難に飛び込み（3）ながら、どこか俯瞰した目（6）で限界を見極め続ける探求者。"
 }
-
+ 
 TECH_LINE_MEANINGS = {
     1: "土台づくり・基礎固め", 2: "生まれ持った独自の才能",
     3: "試して学ぶ・実践型", 4: "人とのつながり・縁",
     5: "問題を解決する力", 6: "全体を見渡して整える力"
 }
-
+ 
 # =====================================================================
 # ▼▼▼ 天文暦セットアップ & 計算関数 ▼▼▼
 # =====================================================================
-ephe_dir = './ephe_data'
-os.makedirs(ephe_dir, exist_ok=True)
-for f in ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']:
-    if not os.path.exists(os.path.join(ephe_dir, f)):
-        urllib.request.urlretrieve('https://github.com/aloistr/swisseph/raw/master/ephe/' + f, os.path.join(ephe_dir, f))
-swe.set_ephe_path(ephe_dir)
-
+def setup_ephemeris():
+    """エフェメリスファイルのセットアップ"""
+    ephe_dir = './ephe_data'
+    os.makedirs(ephe_dir, exist_ok=True)
+    
+    files_to_download = ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']
+    
+    for f in files_to_download:
+        filepath = os.path.join(ephe_dir, f)
+        if not os.path.exists(filepath):
+            try:
+                url = f'https://github.com/aloistr/swisseph/raw/master/ephe/{f}'
+                urllib.request.urlretrieve(url, filepath)
+            except Exception as e:
+                st.warning(f"⚠️ エフェメリスファイル {f} のダウンロードに失敗しました: {e}")
+    
+    swe.set_ephe_path(ephe_dir)
+ 
+# エフェメリスの初期化
+if SWE_AVAILABLE:
+    try:
+        setup_ephemeris()
+    except Exception as e:
+        st.error(f"⚠️ エフェメリスのセットアップに失敗しました: {e}")
+        st.stop()
+ 
 def calculate_design_jd(jd_b, sun_lon):
-    target = (sun_lon - 88.0 + 360.0) % 360.0
-    jd_guess = jd_b - 89.5
-    for _ in range(20):
-        pos, _ = swe.calc_ut(jd_guess, swe.SUN)
-        diff = (pos[0] - target + 360.0) % 360.0
-        if diff > 180: diff -= 360.0
-        jd_guess -= diff / 0.9856
-        if abs(diff) < 0.00001: break
-    return jd_guess
-
+    """デザイン日時の計算"""
+    try:
+        target = (sun_lon - 88.0 + 360.0) % 360.0
+        jd_guess = jd_b - 89.5
+        for _ in range(20):
+            pos, _ = swe.calc_ut(jd_guess, swe.SUN)
+            diff = (pos[0] - target + 360.0) % 360.0
+            if diff > 180:
+                diff -= 360.0
+            jd_guess -= diff / 0.9856
+            if abs(diff) < 0.00001:
+                break
+        return jd_guess
+    except Exception as e:
+        st.error(f"デザイン日時の計算エラー: {e}")
+        return jd_b - 88.0
+ 
 def get_chart_data(y, m, d, h, mi):
-    utc = datetime.datetime(y, m, d, h, mi) - datetime.timedelta(hours=9)
-    jd_b = swe.julday(utc.year, utc.month, utc.day, utc.hour + utc.minute / 60.0)
-    sun_pos, _ = swe.calc_ut(jd_b, swe.SUN)
-    jd_d = calculate_design_jd(jd_b, sun_pos[0])
-    data = []
-    planets = {swe.SUN: "Sun", swe.MOON: "Moon", swe.TRUE_NODE: "NorthNode", swe.MERCURY: "Mercury", swe.VENUS: "Venus", "Mars": "Mars", swe.JUPITER: "Jupiter", swe.SATURN: "Saturn", swe.URANUS: "Uranus", swe.NEPTUNE: "Neptune", swe.PLUTO: "Pluto", swe.CHIRON: "Chiron"}
-    for is_red, jd in [(True, jd_d), (False, jd_b)]:
-        col = "Red" if is_red else "Black"
-        for p_id, p_name in planets.items():
-            pos, _ = swe.calc_ut(jd, p_id)
-            g, l = (GATE_SEQUENCE[int(((pos[0] - 302.0 + 360.0) % 360.0) / 5.625)], int(((pos[0] - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1)
-            data.append({"planet": p_name, "color": col, "gate": g, "line": l})
-            if p_name == "Sun":
-                eg, el = (GATE_SEQUENCE[int(((pos[0] + 180 - 302.0 + 360.0) % 360.0) / 5.625)], int(((pos[0] + 180 - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1)
-                data.append({"planet": "Earth", "color": col, "gate": eg, "line": el})
-            if p_name == "NorthNode":
-                sg, sl = (GATE_SEQUENCE[int(((pos[0] + 180 - 302.0 + 360.0) % 360.0) / 5.625)], int(((pos[0] + 180 - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1)
-                data.append({"planet": "SouthNode", "color": col, "gate": sg, "line": sl})
-    return data, jd_d
-
+    """チャートデータの取得"""
+    try:
+        utc = datetime.datetime(y, m, d, h, mi) - datetime.timedelta(hours=9)
+        jd_b = swe.julday(utc.year, utc.month, utc.day, utc.hour + utc.minute / 60.0)
+        sun_pos, _ = swe.calc_ut(jd_b, swe.SUN)
+        jd_d = calculate_design_jd(jd_b, sun_pos[0])
+        
+        data = []
+        # ⭐ 修正: Marsを正しい定数に変更
+        planets = {
+            swe.SUN: "Sun", 
+            swe.MOON: "Moon", 
+            swe.TRUE_NODE: "NorthNode", 
+            swe.MERCURY: "Mercury", 
+            swe.VENUS: "Venus", 
+            swe.MARS: "Mars",  # 修正: "Mars" → swe.MARS
+            swe.JUPITER: "Jupiter", 
+            swe.SATURN: "Saturn", 
+            swe.URANUS: "Uranus", 
+            swe.NEPTUNE: "Neptune", 
+            swe.PLUTO: "Pluto", 
+            swe.CHIRON: "Chiron"
+        }
+        
+        for is_red, jd in [(True, jd_d), (False, jd_b)]:
+            col = "Red" if is_red else "Black"
+            for p_id, p_name in planets.items():
+                try:
+                    pos, _ = swe.calc_ut(jd, p_id)
+                    g = GATE_SEQUENCE[int(((pos[0] - 302.0 + 360.0) % 360.0) / 5.625)]
+                    l = int(((pos[0] - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1
+                    data.append({"planet": p_name, "color": col, "gate": g, "line": l})
+                    
+                    if p_name == "Sun":
+                        eg = GATE_SEQUENCE[int(((pos[0] + 180 - 302.0 + 360.0) % 360.0) / 5.625)]
+                        el = int(((pos[0] + 180 - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1
+                        data.append({"planet": "Earth", "color": col, "gate": eg, "line": el})
+                    
+                    if p_name == "NorthNode":
+                        sg = GATE_SEQUENCE[int(((pos[0] + 180 - 302.0 + 360.0) % 360.0) / 5.625)]
+                        sl = int(((pos[0] + 180 - 302.0 + 360.0) % 360.0 % 5.625) / (5.625 / 6)) + 1
+                        data.append({"planet": "SouthNode", "color": col, "gate": sg, "line": sl})
+                except Exception as e:
+                    st.warning(f"天体 {p_name} の計算エラー: {e}")
+                    continue
+        
+        return data, jd_d
+    except Exception as e:
+        st.error(f"チャートデータ取得エラー: {e}")
+        return [], 0
+ 
 def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
-    T_TYPE, T_CENTER, T_DEF_CENTER = get_dictionaries(mode)
-    core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
-    
-    # 🌟 定義・未定義センターの確定
-    on_c = set()
-    for r, cs in CHANNELS.items():
-        c1, c2 = r.split('_')
-        for g1, g2, cid in cs:
-            if g1 in core_g and g2 in core_g:
-                on_c.update([c1, c2])
-    
-    off_centers = set(CENTER_ORDER) - on_c
-
-    # エネルギー定義の判定
-    energized_centers = set(MOTOR_CENTERS)
-    if {25, 51}.issubset(core_g) or {5, 15}.issubset(core_g) or {2, 14}.issubset(core_g) or {29, 46}.issubset(core_g) or {34, 10}.issubset(core_g): energized_centers.add("自己")
-    if {18, 58}.issubset(core_g) or {28, 38}.issubset(core_g) or {32, 54}.issubset(core_g) or {34, 57}.issubset(core_g) or {27, 50}.issubset(core_g) or {26, 44}.issubset(core_g): energized_centers.add("直感")
-    if {34, 20}.issubset(core_g) or {12, 22}.issubset(core_g) or {35, 36}.issubset(core_g) or {21, 45}.issubset(core_g): energized_centers.add("表現")
-
-    motor_to_throat = False
-    if "表現" in on_c:
-        adj = collections.defaultdict(list)
+    """レポートデータの生成"""
+    try:
+        T_TYPE, T_CENTER, T_DEF_CENTER = get_dictionaries(mode)
+        
+        # データが空の場合のチェック
+        if not data:
+            st.error("チャートデータが生成されませんでした。")
+            return None
+        
+        core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
+        
+        # 🌟 定義・未定義センターの確定
+        on_c = set()
         for r, cs in CHANNELS.items():
             c1, c2 = r.split('_')
             for g1, g2, cid in cs:
                 if g1 in core_g and g2 in core_g:
-                    adj[c1].append(c2)
-                    adj[c2].append(c1)
-        v_throat = set()
-        queue = ["表現"]
-        while queue:
-            curr = queue.pop(0)
-            if curr not in v_throat:
-                v_throat.add(curr)
-                if curr in MOTOR_CENTERS: motor_to_throat = True
-                queue.extend([n for n in adj[curr] if n not in v_throat])
-
-    if "生命力" in on_c: type_str = "表現する生命型" if motor_to_throat else "生命力型"
-    else:
-        if motor_to_throat: type_str = "行動開始型"
-        elif len(on_c) > 0: type_str = "導き型"
-        else: type_str = "反射型"
-
-    def calc_gate_score(gate, planet):
-        c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
-        if c in energized_centers:
-            return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
-        return 0.0
-
-    # 🌟【完全修正版】スコア計算ロジック（0点撲滅！）
-    center_scores = {}
-    total_score = 0
-    for c in CENTER_ORDER:
-        c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
-        c_int = int(round(c_score))
+                    on_c.update([c1, c2])
         
-        if c in off_centers:
-            # 未定義（白）の場合：漏電として最低「5ポイント」
-            c_int = max(c_int, 5)
+        off_centers = set(CENTER_ORDER) - on_c
+ 
+        # エネルギー定義の判定
+        energized_centers = set(MOTOR_CENTERS)
+        if {25, 51}.issubset(core_g) or {5, 15}.issubset(core_g) or {2, 14}.issubset(core_g) or {29, 46}.issubset(core_g) or {34, 10}.issubset(core_g):
+            energized_centers.add("自己")
+        if {18, 58}.issubset(core_g) or {28, 38}.issubset(core_g) or {32, 54}.issubset(core_g) or {34, 57}.issubset(core_g) or {27, 50}.issubset(core_g) or {26, 44}.issubset(core_g):
+            energized_centers.add("直感")
+        if {34, 20}.issubset(core_g) or {12, 22}.issubset(core_g) or {35, 36}.issubset(core_g) or {21, 45}.issubset(core_g):
+            energized_centers.add("表現")
+ 
+        motor_to_throat = False
+        if "表現" in on_c:
+            adj = collections.defaultdict(list)
+            for r, cs in CHANNELS.items():
+                c1, c2 = r.split('_')
+                for g1, g2, cid in cs:
+                    if g1 in core_g and g2 in core_g:
+                        adj[c1].append(c2)
+                        adj[c2].append(c1)
+            v_throat = set()
+            queue = ["表現"]
+            while queue:
+                curr = queue.pop(0)
+                if curr not in v_throat:
+                    v_throat.add(curr)
+                    if curr in MOTOR_CENTERS:
+                        motor_to_throat = True
+                    queue.extend([n for n in adj[curr] if n not in v_throat])
+ 
+        if "生命力" in on_c:
+            type_str = "表現する生命型" if motor_to_throat else "生命力型"
         else:
-            # 定義済（色つき）の場合：0点にならないよう、本来の器として最低「10ポイント」を保証
-            c_int = max(c_int, 10)
-            
-        center_scores[c] = c_int
-        total_score += c_int
-
-    p_sun = next(x for x in data if x["planet"] == "Sun" and x["color"] == "Black")
-    d_sun = next(x for x in data if x["planet"] == "Sun" and x["color"] == "Red")
-    profile = f"{p_sun['line']}/{d_sun['line']}"
-
-    # 🌟 HTMLテキストの生成
-    spec_f = io.StringIO()
-    with contextlib.redirect_stdout(spec_f):
-        print(DIVIDER)
-        print("**👶 あなたの基本体質と役割**")
-        print(DIVIDER)
-        print(f"\n【生まれつきの性質】: {type_str}\n")
-        print(f"\n └ 特徴: {T_TYPE.get(type_str, '解析中')}\n")
-        print(f"\n【人生の役割】: {profile}\n")
-        print(f"\n └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '')}\n")
-
-    # 専門家向けHTML
-    exp_f = io.StringIO()
-    with contextlib.redirect_stdout(exp_f):
-        print(f"\n【心身の統合状態 (定義型)】: 解析中\n")
-        print("\n" + DIVIDER)
-        print("**🔭 天体と扉の対応表**")
-        print(DIVIDER)
-        for p in PLANET_ORDER:
-            r = next((x for x in data if x["planet"] == p and x["color"] == "Red"), None)
-            b = next((x for x in data if x["planet"] == p and x["color"] == "Black"), None)
-            if r and b:
-                print(f"{PLANET_JP.get(p, p)}")
-                print(f"<span class='unconscious-red'>先天 {r['gate']:02d}.{r['line']}</span> ║ 後天 {b['gate']:02d}.{b['line']}\n")
-        print("\n" + DIVIDER)
-        print("**🚪 身体の働き（中枢）ごとの詳細一覧**")
-        print(DIVIDER)
+            if motor_to_throat:
+                type_str = "行動開始型"
+            elif len(on_c) > 0:
+                type_str = "導き型"
+            else:
+                type_str = "反射型"
+ 
+        def calc_gate_score(gate, planet):
+            c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
+            if c in energized_centers:
+                return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
+            return 0.0
+ 
+        # 🌟【完全修正版】スコア計算ロジック（0点撲滅！）
+        center_scores = {}
+        total_score = 0
         for c in CENTER_ORDER:
-            c_gates = [(x["gate"], x["line"], x["planet"], x["color"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c]]
-            if c_gates:
-                print(f"\n■ **{c}**\n")
-                for g, line, p, col in sorted(c_gates, key=lambda x: x[0]):
-                    mean_str = GATE_TECH_MEANINGS.get(g, "")
-                    if col == "Red": print(f"\nー <span class='unconscious-red'>扉 {g:>2} {mean_str} (先天)</span>")
-                    else: print(f"\nー 扉 {g:>2} {mean_str} (後天)")
-
-    return {
-        "total_score": total_score, "center_scores": center_scores, "off_centers": off_centers,
-        "on_c": on_c, "T_CENTER": T_CENTER, "T_DEF_CENTER": T_DEF_CENTER, "html_spec": spec_f.getvalue(), "html_expert": exp_f.getvalue()
-    }
-
+            c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
+            c_int = int(round(c_score))
+            
+            if c in off_centers:
+                # 未定義（白）の場合：漏電として最低「5ポイント」
+                c_int = max(c_int, 5)
+            else:
+                # 定義済（色つき）の場合：0点にならないよう、本来の器として最低「10ポイント」を保証
+                c_int = max(c_int, 10)
+                
+            center_scores[c] = c_int
+            total_score += c_int
+ 
+        # プロファイルの取得
+        p_sun_list = [x for x in data if x["planet"] == "Sun" and x["color"] == "Black"]
+        d_sun_list = [x for x in data if x["planet"] == "Sun" and x["color"] == "Red"]
+        
+        if not p_sun_list or not d_sun_list:
+            st.error("太陽のデータが見つかりません。")
+            return None
+        
+        p_sun = p_sun_list[0]
+        d_sun = d_sun_list[0]
+        profile = f"{p_sun['line']}/{d_sun['line']}"
+ 
+        # 🌟 HTMLテキストの生成
+        spec_f = io.StringIO()
+        with contextlib.redirect_stdout(spec_f):
+            print(DIVIDER)
+            print("**👶 あなたの基本体質と役割**")
+            print(DIVIDER)
+            print(f"\n【生まれつきの性質】: {type_str}\n")
+            print(f"\n └ 特徴: {T_TYPE.get(type_str, '解析中')}\n")
+            print(f"\n【人生の役割】: {profile}\n")
+            print(f"\n └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '')}\n")
+ 
+        # 専門家向けHTML
+        exp_f = io.StringIO()
+        with contextlib.redirect_stdout(exp_f):
+            print(f"\n【心身の統合状態 (定義型)】: 解析中\n")
+            print("\n" + DIVIDER)
+            print("**🔭 天体と扉の対応表**")
+            print(DIVIDER)
+            for p in PLANET_ORDER:
+                r_list = [x for x in data if x["planet"] == p and x["color"] == "Red"]
+                b_list = [x for x in data if x["planet"] == p and x["color"] == "Black"]
+                
+                r = r_list[0] if r_list else None
+                b = b_list[0] if b_list else None
+                
+                if r and b:
+                    print(f"{PLANET_JP.get(p, p)}")
+                    print(f"<span class='unconscious-red'>先天 {r['gate']:02d}.{r['line']}</span> ║ 後天 {b['gate']:02d}.{b['line']}\n")
+            
+            print("\n" + DIVIDER)
+            print("**🚪 身体の働き（中枢）ごとの詳細一覧**")
+            print(DIVIDER)
+            for c in CENTER_ORDER:
+                c_gates = [(x["gate"], x["line"], x["planet"], x["color"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c]]
+                if c_gates:
+                    print(f"\n■ **{c}**\n")
+                    for g, line, p, col in sorted(c_gates, key=lambda x: x[0]):
+                        mean_str = GATE_TECH_MEANINGS.get(g, "")
+                        if col == "Red":
+                            print(f"\nー <span class='unconscious-red'>扉 {g:>2} {mean_str} (先天)</span>")
+                        else:
+                            print(f"\nー 扉 {g:>2} {mean_str} (後天)")
+ 
+        return {
+            "total_score": total_score, 
+            "center_scores": center_scores, 
+            "off_centers": off_centers,
+            "on_c": on_c, 
+            "T_CENTER": T_CENTER, 
+            "T_DEF_CENTER": T_DEF_CENTER, 
+            "html_spec": spec_f.getvalue(), 
+            "html_expert": exp_f.getvalue()
+        }
+    except Exception as e:
+        st.error(f"レポート生成エラー: {e}")
+        import traceback
+        st.error(traceback.format_exc())
+        return None
+ 
 # =====================================================================
 # ▼▼▼ UI描画（リアルタイム反映版） ▼▼▼
 # =====================================================================
@@ -341,7 +454,7 @@ display_mode = st.sidebar.radio(
     ["🌿 やさしい和語（初心者・一般）", "🏫 中高生向け（学園生活・青春）", "💻 ビジネス・論理派（経営・最適化）"],
     on_change=reset_state
 )
-
+ 
 st.sidebar.markdown("---")
 st.sidebar.header("▼ 生年月日の入力 (日本時間)")
 input_date = st.sidebar.date_input("生年月日", value=datetime.date(1980, 1, 1), min_value=datetime.date(1920, 1, 1), max_value=datetime.date.today())
@@ -349,20 +462,26 @@ col1, col2 = st.sidebar.columns(2)
 HOUR = col1.selectbox("時", range(24), index=12)
 MINUTE = col2.selectbox("分", range(60), index=30)
 YEAR, MONTH, DAY = input_date.year, input_date.month, input_date.day
-
+ 
 if st.sidebar.button("🌿 体質診断を開始する", on_click=reset_state):
     with st.spinner("診断中..."):
         c_data, jd_d = get_chart_data(YEAR, MONTH, DAY, HOUR, MINUTE)
-        st.session_state['report_data'] = generate_report_data(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE, display_mode)
-        st.session_state['current_mode'] = display_mode
-
+        report = generate_report_data(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE, display_mode)
+        if report:
+            st.session_state['report_data'] = report
+            st.session_state['current_mode'] = display_mode
+        else:
+            st.error("診断データの生成に失敗しました。")
+ 
 if 'report_data' in st.session_state:
     if st.session_state.get('current_mode') != display_mode:
         with st.spinner("モード切替中..."):
             c_data, jd_d = get_chart_data(YEAR, MONTH, DAY, HOUR, MINUTE)
-            st.session_state['report_data'] = generate_report_data(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE, display_mode)
-            st.session_state['current_mode'] = display_mode
-
+            report = generate_report_data(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE, display_mode)
+            if report:
+                st.session_state['report_data'] = report
+                st.session_state['current_mode'] = display_mode
+ 
     rd = st.session_state['report_data']
     mode = st.session_state['current_mode']
     
@@ -381,24 +500,29 @@ if 'report_data' in st.session_state:
             st.markdown(f"**{t_data['curse']}**")
             
             pts = rd['center_scores'][c]
+            
+            # session_stateの初期化チェック
+            if f"chk_{c}" not in st.session_state:
+                st.session_state[f"chk_{c}"] = False
+            
             st.checkbox(f"👆 最近、この状態に当てはまる (-{pts} 消耗)", key=f"chk_{c}")
             
             st.markdown(f"*{t_data['truth']}*\n\n`{t_data['solution']}`")
             st.divider()
-
+ 
     # 🌟 リアルタイム計算
     deducted = sum(rd['center_scores'][c] for c in CENTER_ORDER if st.session_state.get(f"chk_{c}", False))
     current_score = max(0, rd['total_score'] - deducted)
-
+ 
     # 🌟 プレースホルダーの中身を埋める（リアルタイム更新）
     with meter_top.container():
         st.markdown(f"### 🔋 本来の器: {rd['total_score']} / {rd['total_score']}")
         blocks_top = "".join([f"<div style='width:14px;height:14px;background:#00BFFF;border-radius:2px;display:inline-block;margin:2px;'></div>" for _ in range(rd['total_score'])])
         st.markdown(f"<div style='background:#f8f9fa;padding:10px;border-radius:8px;'>{blocks_top}</div>", unsafe_allow_html=True)
-
+ 
     with spec_card.container():
         st.markdown(f"<div class='card'>\n{rd['html_spec']}\n</div>", unsafe_allow_html=True)
-
+ 
     # 🌟 一番下の「現在の活力」メーター
     st.markdown("---")
     st.markdown(f"### 📉 現在の活力: {current_score} / {rd['total_score']}")
@@ -412,7 +536,7 @@ if 'report_data' in st.session_state:
         color = "#E53935" if i < current_score else "#CFD8DC"
         blocks_bottom += f"<div style='width:14px;height:14px;background:{color};border-radius:2px;display:inline-block;margin:2px;'></div>"
     st.markdown(f"<div style='background:#f8f9fa;padding:10px;border-radius:8px;'>{blocks_bottom}</div>", unsafe_allow_html=True)
-
+ 
     # 🌟 VIPエリア（省略なし）
     with st.expander("▼ 🔒【鑑定士向け詳細データ】扉・段階・天体の詳細（※要パスコード）"):
         st.info("💡 ここから先は鑑定士（専門家）向けの命式データエリアです。")
