@@ -513,4 +513,27 @@ if 'report_data' in st.session_state:
     
     if is_tech_mode:
         ui_notself_title = "### 🚨 心身のバグ診断（エラー自己検出）"
-        ui_notself_desc = "💡 日常の中で発生しているエラー（思い込み）
+st.info("💡 日常の中で感じるエラー（思い込み）にチェックを入れてください。システムがどれだけダウンしているか、上のメーターが減衰します。")
+    
+    for c in CENTER_ORDER:
+        with st.container():
+            st.markdown(f"#### ■ **{c}**（{CENTER_ORGANS[c]}）")
+            if c in rd['off_centers']:
+                st.markdown(f"**{rd['T_CENTER'][c]['curse']}**")
+                st.markdown(f"*{rd['T_CENTER'][c]['truth']}*")
+                st.markdown(f"`{rd['T_CENTER'][c]['solution']}`")
+            else:
+                st.markdown("**(安定稼働中)**")
+                st.markdown(f"**{rd['T_DEF_CENTER'][c]['curse']}**")
+                st.markdown(f"*{rd['T_DEF_CENTER'][c]['truth']}*")
+                st.markdown(f"`{rd['T_DEF_CENTER'][c]['solution']}`")
+            
+            pts = rd['center_scores'][c]
+            lbl = f"✖ 最近このエラーが発生している（システムダウン -{pts}）" if pts > 0 else "✖ 最近このエラーが発生している"
+            st.checkbox(lbl, key=f"chk_{c}")
+            st.divider()
+
+    st.markdown(f"<div class='card'>\n{rd['html_overview']}\n</div>", unsafe_allow_html=True)
+
+    with st.expander("▼ 【専門データ】ゲート・ライン・天体の詳細を開く"):
+        st.markdown(f"<div class='card' style='background-color:#f8f9fa;'>\n{rd['html_expert']}\n</div>", unsafe_allow_html=True)
