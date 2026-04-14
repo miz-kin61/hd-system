@@ -39,10 +39,19 @@ display_mode = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.header("▼ 生年月日の入力 (日本時間)")
-input_date = st.sidebar.date_input("生年月日", value=datetime.date(1980, 1, 1), min_value=datetime.date(1920, 1, 1))
+
+# 🌟 ここが原因でした！元の設定（max_value）を完全に復活！
+input_date = st.sidebar.date_input(
+    "生年月日", 
+    value=datetime.date(1980, 1, 1), 
+    min_value=datetime.date(1920, 1, 1),
+    max_value=datetime.date.today()
+)
+
 col1, col2 = st.sidebar.columns(2)
 HOUR = col1.selectbox("時", range(24), index=12)
 MINUTE = col2.selectbox("分", range(60), index=30)
+
 YEAR, MONTH, DAY = input_date.year, input_date.month, input_date.day
 
 # =====================================================================
