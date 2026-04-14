@@ -353,12 +353,23 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
 
+# 🌟 修正版：スコア計算ロジック（未定義センターの漏電対応）
     center_scores = {}
     total_score = 0
     for c in CENTER_ORDER:
+        # そのセンターに持っているゲートの基本得点を計算
         c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
+        
         c_int = int(round(c_score))
-        if c_score > 0 and c_int == 0: c_int = 1
+        
+        # ▼ ここが新ロジック！
+        if c in off_centers:
+            # 未定義（白）の場合：ゲートがあってもなくても、最低「5ポイント」の消耗値を持たせる
+            c_int = max(c_int, 5) 
+        elif c_score > 0 and c_int == 0:
+            # 定義済みで計算上0になった場合でも最低1ポイント
+            c_int = 1
+            
         center_scores[c] = c_int
         total_score += c_int
 
