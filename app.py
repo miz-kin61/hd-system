@@ -1,5 +1,5 @@
 # =====================================================================
-# タイトル: HD自作エンジン Webアプリ版 (Notself連動 ＋ 三層モード切替版)
+# タイトル: HD自作エンジン Webアプリ版 (完全完成版)
 # =====================================================================
 import streamlit as st
 import io
@@ -39,23 +39,14 @@ display_mode = st.sidebar.radio(
 
 st.sidebar.markdown("---")
 st.sidebar.header("▼ 生年月日の入力 (日本時間)")
-
-# 🌟 ここが原因でした！元の設定（max_value）を完全に復活！
-input_date = st.sidebar.date_input(
-    "生年月日", 
-    value=datetime.date(1980, 1, 1), 
-    min_value=datetime.date(1920, 1, 1),
-    max_value=datetime.date.today()
-)
-
+input_date = st.sidebar.date_input("生年月日", value=datetime.date(1980, 1, 1), min_value=datetime.date(1920, 1, 1), max_value=datetime.date.today())
 col1, col2 = st.sidebar.columns(2)
 HOUR = col1.selectbox("時", range(24), index=12)
 MINUTE = col2.selectbox("分", range(60), index=30)
-
 YEAR, MONTH, DAY = input_date.year, input_date.month, input_date.day
 
 # =====================================================================
-# ▼▼▼ 3. 三層モード辞書システム（省略一切なし！） ▼▼▼
+# ▼▼▼ 3. 三層モード辞書システム ▼▼▼
 # =====================================================================
 def get_dictionaries(mode):
     if "理系" in mode:
@@ -96,7 +87,7 @@ def get_dictionaries(mode):
             "感情": {"curse": "🌀 【悩み】気分が上がってる時や、イライラしてる時に勢いで決めて、後で大後悔。", "truth": "✨ 【才能】時間をかけて自分の気持ちが落ち着くのを待てば、100点の答えが出せる。", "solution": "👉 【コツ】「一晩寝かせてから返事するわ」が最強の決め台詞。"},
             "活力": {"curse": "🌀 【悩み】「早く課題出しなさい！」と急かされてパニック。焦ってミス連発。", "truth": "✨ 【才能】自分のペースで取り組めば、すごいパワーでやり切れる集中力の持ち主。", "solution": "👉 【コツ】「人は人、私は私。他人の焦り（プレッシャー）は受け取らない」。"}
         }
-    else: # やさしい言葉モード
+    else: 
         type_strengths = {
             "生命力型": "安定した生命力を持ち続けるエンジン体質。\n繰り返しの積み重ねで体と心を最高の状態へ整え、外からの呼びかけへの反応力が高い。",
             "表現する生命型": "複数のことを同時にこなす多機能型の体質。\n試行錯誤しながら最短の道を直感で見つける、素早い行動力を持つ。",
@@ -111,7 +102,7 @@ def get_dictionaries(mode):
             "自己": {"curse": "🌀 【思い込み】「自分探しをしろ」「確固たる自分を持て」\n └ 固定した自分を探し続けて迷い、心が落ち着かなくなる。", "truth": "✨ 【本来の仕組み】いる場所や出会う人に応じて自然に向きを変える「羅針盤」。", "solution": "👉 【整える言葉】「私は環境によって変わっていい。それが私らしさです」"},
             "意志": {"curse": "🌀 【思い込み】「約束は必ず守れ」「努力して価値を証明しろ」\n └ 体の限界を超えてまで頑張り続け、負担をかけてしまう。", "truth": "✨ 【本来の仕組み】自分の価値を証明し続けなくていい「無重力の心」。", "solution": "👉 【整える言葉】「証明すべきことは何もない。体が無理だと言ったら止めていい」"},
             "生命力": {"curse": "🌀 【思い込み】「途中で投げ出すな」「休むな」\n └ 他人のペースに引きずられ、疲れ果ててしまう。", "truth": "✨ 【本来の仕組み】必要な分だけ力を出して、用が済んだらすっと手放せる「充電不要な電池」。", "solution": "👉 【整える言葉】「今日分の力は使い切った。体が止まれと言う前に、先に休む」"},
-            "直感": {"curse": "🌀 【思い込み】「石の上にも三年」「手放すのはもったいない」\n └ 古い恐れに縛られ、合わない環境に居続けてしまう。", "truth": "✨ 【本来の仕組み】違和感を感じたらすぐ離れられる「体の警報装置」。", "solution": "👉 【整える言葉】「なんとなく嫌な感じがする場所・人とは、すぐ距離を置いていい」"},
+            "直感": {"curse": "🌀 【思い込み】「石の上にも三年」「手放すのはもったいない」\n └ 古い恐れに縛られ、合わない環境に居続けてしまう。", "truth": "✨ 【本来の仕組み】違感を感じたらすぐ離れられる「体の警報装置」。", "solution": "👉 【整える言葉】「なんとなく嫌な感じがする場所・人とは、すぐ距離を置いていい」"},
             "感情": {"curse": "🌀 【思い込み】「空気を読め」「感情的になるな」\n └ 自分の気持ちを押し込めて「いい人」を演じ続け、疲弊する。", "truth": "✨ 【本来の仕組み】他者の感情の波を感じながら、そっと観察できる「共感の受信機」。", "solution": "👉 【整える言葉】「この感情の波は、誰かのもの。私はただ感じているだけでいい」"},
             "活力": {"curse": "🌀 【思い込み】「早く終わらせろ」「やることを溜めるな」\n └ 外からのプレッシャーで常に焦らされ、体が休まらなくなる。", "truth": "✨ 【本来の仕組み】外からのせかしをやり過ごし、自分のペースで動ける「独立した活力の源」。", "solution": "👉 【整える言葉】「急いでも物事は変わらない。他人の焦りは受け取らなくていい」"}
         }
@@ -119,8 +110,9 @@ def get_dictionaries(mode):
     return type_strengths, center_issues, DEFINED_CENTER_ISSUES_BASE
 
 # =====================================================================
-# ▼▼▼ 4. 固定データ群（省略なし！） ▼▼▼
+# ▼▼▼ 4. 固定データ群 ▼▼▼
 # =====================================================================
+# 🌟 ノードのスコア修正版（0.0 -> 1.0）
 CUSTOM_WEIGHTS = {"Sun": 35.0, "Earth": 35.0, "Moon": 10.0, "Mercury": 4.5, "Venus": 4.0, "Mars": 3.5, "Jupiter": 3.0, "Saturn": 2.0, "Uranus": 1.5, "Neptune": 1.0, "Pluto": 0.5, "NorthNode": 1.0, "SouthNode": 1.0, "Chiron": 0.0}
 DORMANT_MULTIPLIER = 0.3
 FORCED_GATES = set()
@@ -355,20 +347,20 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
         if c in energized_centers:
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
-    
-center_scores = {}
+
+    # 🌟 バグ修正済みのスコア計算ロジック
+    center_scores = {}
     total_score = 0
     for c in CENTER_ORDER:
         c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
         
-        # ▼ ここを修正！(四捨五入しつつ、最低1ポイントは保証する)
         c_int = int(round(c_score))
         if c_score > 0 and c_int == 0:
             c_int = 1
             
         center_scores[c] = c_int
         total_score += c_int
-        
+
     all_centers = set(CENTER_GATES.keys())
     off_centers = all_centers - set(on_c)
     full_open = [c for c in off_centers if len(CENTER_GATES[c] & set(core_g)) == 0]
@@ -473,11 +465,20 @@ if 'report_data' in st.session_state:
     st.info(f"現在の翻訳モード: **{mode}**")
     
     if "理系" in mode:
-        title, desc, m_title, chk_lbl = "🚨 心身のバグ診断", "エラー（思い込み）にチェックを入れてください。システムダウン値が可視化されます。", "システム稼働率", "✖ システムエラー発生中"
+        title = "🚨 心身のバグ診断"
+        desc = "エラー（思い込み）にチェックを入れてください。システム稼働率が変動します。"
+        m_title = "システム稼働率"
+        chk_lbl = "✖ システムエラー発生中"
     elif "中高生" in mode:
-        title, desc, m_title, chk_lbl = "🚨 青春のモヤモヤ診断", "日常の「あるある」にチェック！自分らしさがどれくらい隠れてるかわかるよ。", "自分らしさ全開度", "✖ この「あるある」にハマってる"
+        title = "🚨 青春のモヤモヤ診断"
+        desc = "「あるある」にチェックを入れてね。自分らしさ全開度がわかるよ。"
+        m_title = "自分らしさ全開度"
+        chk_lbl = "✖ これにハマってる"
     else:
-        title, desc, m_title, chk_lbl = "🚨 心身の歪み診断", "日常の不調（思い込み）にチェックを入れてください。エネルギーのブロックが視覚化されます。", "本来のエネルギー発揮度", "✖ これに振り回されている"
+        title = "🚨 心身の歪み診断"
+        desc = "日常の不調（思い込み）にチェックを入れてください。エネルギーのブロックが視覚化されます。"
+        m_title = "本来のエネルギー発揮度"
+        chk_lbl = "✖ 振り回されている"
 
     deducted = sum(rd['center_scores'][c] for c in CENTER_ORDER if st.session_state.get(f"chk_{c}", False))
     current_score = max(0, rd['total_score'] - deducted)
