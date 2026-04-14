@@ -43,7 +43,7 @@ display_mode = st.sidebar.radio(
 )
 
 st.sidebar.markdown("---")
-st.sidebar.header("▼ 生年月日の入力")
+st.sidebar.header("▼ 生年月日の入力 (日本時間)")
 input_date = st.sidebar.date_input("生年月日", value=datetime.date(1980, 1, 1), min_value=datetime.date(1920, 1, 1), max_value=datetime.date.today())
 col1, col2 = st.sidebar.columns(2)
 HOUR = col1.selectbox("時", range(24), index=12)
@@ -112,6 +112,17 @@ def get_dictionaries(mode):
             "活力": {"curse": "🌀 【思い込み】「外からのプレッシャーで常に焦らされ、体が休まらなくなる」", "truth": "✨ 【本来の強み】外からのせかしをやり過ごし、自分のペースで動ける「独立した活力の源」。", "solution": "💡 【整える言葉】「急いでも物事は変わらない。他人の焦りは受け取らなくていい」"}
         }
 
+    DEFINED_CENTER_ISSUES_BASE = {
+        "頭脳": {"curse": "🌀 【外からの思い込み】「他人の悩みにも関心を持て」", "truth": "✨ 【本来の仕組み】自分に必要な気づきだけを受け取る。", "solution": "👉 【整える言葉】「他人の悩みを自分の中に入れない。」"},
+        "思考": {"curse": "🌀 【外からの思い込み】「もっと柔軟になれ」", "truth": "✨ 【本来の仕組み】一定のやり方で確実に情報を処理する。", "solution": "👉 【整える言葉】「私の考え方は生まれつきの仕様。」"},
+        "表現": {"curse": "🌀 【外からの思い込み】「もっと言葉を選べ」", "truth": "✨ 【本来の仕組み】自分のスタイルで確かに言葉を出せる。", "solution": "👉 【整える言葉】「この伝え方が私の自然な声。」"},
+        "自己": {"curse": "🌀 【外からの思い込み】「相手に合わせなさい」", "truth": "✨ 【本来の仕組み】自分を中心に、合う人・環境を引き寄せる。", "solution": "👉 【整える言葉】「私は動かない。合う人だけが近づいてくる」"},
+        "意志": {"curse": "🌀 【外からの思い込み】「謙虚であれ」", "truth": "✨ 【本来の仕組み】確固たる意志で正当な対価を受け取る。", "solution": "👉 【整える言葉】「堂々と対価を求めていい」"},
+        "生命力": {"curse": "🌀 【外からの思い込み】「頭で考えて動け」", "truth": "✨ 【本来の仕組み】体が反応した瞬間だけ、無限の活力が湧き出る。", "solution": "👉 【整える言葉】「体の奥が反応するまで、静かに待つ」"},
+        "直感": {"curse": "🌀 【外からの思い込み】「根拠を出せ」", "truth": "✨ 【本来の仕組み】今この瞬間の正解を、一瞬で知らせる警報。", "solution": "👉 【整える言葉】「なんとなく嫌だから。理由は後でいい」"},
+        "感情": {"curse": "🌀 【外からの思い込み】「すぐ決断しろ！」", "truth": "✨ 【本来の仕組み】時間をかけるほど本当の答えが見えてくる。", "solution": "👉 【整える言葉】「数日ゆっくり考えてからお返事します」"},
+        "活力": {"curse": "🌀 【外からの思い込み】「焦らなくていい」", "truth": "✨ 【本来の仕組み】自らプレッシャーを生み出し、一気に処理する。", "solution": "👉 【整える言葉】「プレッシャーは私の力の源です」"}
+    }
     return type_strengths, center_issues, DEFINED_CENTER_ISSUES_BASE
 
 # =====================================================================
@@ -122,18 +133,78 @@ DORMANT_MULTIPLIER = 0.3
 FORCED_GATES = set()
 GATE_SEQUENCE = [41, 19, 13, 49, 30, 55, 37, 63, 22, 36, 25, 17, 21, 51, 42, 3, 27, 24, 2, 23, 8, 20, 16, 35, 45, 12, 15, 52, 39, 53, 62, 56, 31, 33, 7, 4, 29, 59, 40, 64, 47, 6, 46, 18, 48, 57, 32, 50, 28, 44, 1, 43, 14, 34, 9, 5, 26, 11, 10, 58, 38, 54, 61, 60]
 CENTER_GATES = {"頭脳": {64, 61, 63}, "思考": {47, 24, 4, 17, 43, 11}, "表現": {62, 23, 56, 31, 8, 33, 20, 16, 35, 12, 45}, "自己": {7, 1, 13, 25, 46, 2, 15, 10}, "意志": {21, 51, 26, 40}, "生命力": {34, 5, 14, 29, 59, 9, 3, 42, 27}, "直感": {48, 57, 44, 50, 32, 28, 18}, "感情": {36, 22, 37, 6, 49, 55, 30}, "活力": {58, 38, 54, 53, 60, 52, 19, 39, 41}}
+CENTER_ORGANS = {"頭脳": "松果体", "思考": "脳下垂体", "表現": "甲状腺・副甲状腺", "自己": "肝臓・血液", "意志": "心臓・胸腺・胆嚢", "生命力": "卵巣・精巣", "直感": "脾臓・リンパ系", "感情": "膵臓・腎臓・神経系", "活力": "副腎"}
 CHANNELS = {"頭脳_思考": [(64,47,"64-47"), (61,24,"61-24"), (63,4,"63-4")], "思考_表現": [(17,62,"17-62"), (43,23,"43-23"), (11,56,"11-56")], "表現_自己": [(31,7,"31-7"), (8,1,"8-1"), (33,13,"33-13"), (10,20,"10-20")], "表現_意志": [(45,21,"45-21")], "表現_感情": [(35,36,"35-36"), (12,22,"12-22")], "表現_直感": [(16,48,"16-48"), (20,57,"20-57")], "表現_生命力": [(20,34,"20-34")], "自己_意志": [(25,51,"25-51")], "自己_生命力": [(5,15,"5-15"), (46,29,"46-29"), (2,14,"2-14"), (10,34,"10-34")], "自己_直感": [(10,57,"10-57")], "意志_感情": [(40,37,"40-37")], "意志_直感": [(26,44,"26-44")], "生命力_感情": [(6,59,"6-59")], "生命力_直感": [(50,27,"50-27"), (34,57,"34-57")], "生命力_活力": [(53,42,"53-42"), (3,60,"3-60"), (9,52,"9-52")], "感情_活力": [(19,49,"19-49"), (39,55,"39-55"), (41,30,"41-30")], "直感_活力": [(18,58,"18-58"), (28,38,"28-38"), (32,54,"32-54")]}
 
-GATE_TECH_MEANINGS = {i: f"扉 {i}" for i in range(1, 65)} # 省略(実際はフルデータ)
-PROFILE_TECH_MEANINGS = { "1/3": "探求と実践" } # 省略(実際はフルデータ)
-DEFINED_CENTER_ISSUES_BASE = {c: {"curse": "安定稼働中", "truth": "本来の強み", "solution": "そのままのあなたで"} for c in CENTER_ORDER}
+GATE_TECH_MEANINGS = {
+    1:  "【創造】 独自の生命表現を生み出す力", 2:  "【受容】 必要なものを自然に引き寄せる磁力",
+    3:  "【秩序】 混乱した状態を整え形にする力", 4:  "【答え】 不調の原因を論理的に見つける力",
+    5:  "【待機】 安定したリズムで体を動かす力", 6:  "【摩擦】 ぶつかりながら境界線を整える力",
+    7:  "【役割】 未来の体の在り方を設計する力", 8:  "【貢献】 独自のビジョンを外へ伝える力",
+    9:  "【集中】 細部まで丁寧に注意を向ける力", 10: "【自己行動】 自分らしさを土台にした生き方",
+    11: "【思想】 無数のアイデアを心の中で育てる力", 12: "【慎重】 適切なタイミングで言葉を発する力",
+    13: "【聞く】 過去の記憶を丁寧に聞き取る力", 14: "【技術】 豊かさを大きく広げる増幅の力",
+    15: "【柔軟】 さまざまな環境に自然に溶け込む力", 16: "【練習】 繰り返しによって精度を高める力",
+    17: "【意見】 筋道立てて物事を組み立てる力", 18: "【修正】 既存の仕組みの問題を見つけ直す力",
+    19: "【感知】 必要な環境を察知する感受性", 20: "【今】 今この瞬間の状況を的確に伝える力",
+    21: "【統制】 資源を中心で束ねて管理する力", 22: "【開放】 感情を優雅に外へ表現する力",
+    23: "【同化】 複雑なものをシンプルに伝える力", 24: "【帰還】 繰り返し内省して最善解を見つける力",
+    25: "【純粋な愛】 見返りを求めない愛を広げる力", 26: "【効率】 少ない力で大きな成果を引き出す力",
+    27: "【養育】 他者の体と心を整え支える力", 28: "【挑戦】 限界まで試して突き抜ける力",
+    29: "【肯定】 全力で取り組み完遂する力", 30: "【体験】 新しい体験への入口を開く力",
+    31: "【影響力】 論理的に周囲を導くリーダーの力", 32: "【継続】 長く受け継がれてきた価値を守る力",
+    33: "【振り返り】 過去の記録を整理し蓄える力", 34: "【力】 自立して動く主エネルギーの馬力",
+    35: "【変化】 新しい体験を積み重ねて前進する力", 36: "【危機突破】 未知の困難を乗り越えて処理する力",
+    37: "【絆】 共同体の中で資源を分かち合う力", 38: "【抵抗】 目的を守るための粘り強い防衛力",
+    39: "【刺激】 停滞を突き動かして変化を促す力", 40: "【孤独】 一人の時間で体を回復させる力",
+    41: "【始まり】 新しい取り組みの最初の一歩", 42: "【完成】 始まったことを最後まで育てる力",
+    43: "【洞察】 突然ひらめく独創的な気づきの力", 44: "【警戒】 過去の記憶から危険を読み取る力",
+    45: "【まとめ役】 資源を集め管理する力", 46: "【体との一致】 物理的な環境と完全に同調する力",
+    47: "【解析】 過去の経験に意味を見出す力", 48: "【深い知恵】 蓄積された知識の奥から引き出す力",
+    49: "【刷新】 不要な関係を断ち切り作り直す力", 50: "【価値観】 全体の安全を守る共通の規範",
+    51: "【衝撃】 驚きによって体と心を再起動させる力", 52: "【静止】 深く集中するための静止の力",
+    53: "【開始】 新しい取り組みを動かし始める力", 54: "【向上心】 上の段階へ自らを押し上げる力",
+    55: "【豊かさ】 感情の波を通じて豊かさを育てる力", 56: "【語り】 体験を物語にして届ける力",
+    57: "【直感】 今この瞬間の危険を即座に察知する力", 58: "【生きがい】 体を整え続ける持続的な生命力",
+    59: "【親密さ】 心の壁を越えてつながる力", 60: "【制限の中で生きる】 制約の中で確実に前進する力",
+    61: "【神秘】 未知の真理へ触れようとする力", 62: "【細部】 細かいところまで正確に記述する力",
+    63: "【問い】 論理的な矛盾を見つけ問い直す力", 64: "【混沌の整理】 整理されていない記憶を受け止める力"
+}
+
+PROFILE_TECH_MEANINGS = {
+    "1/3": "【探求と実践の人】 基礎をしっかり学んで（1）、試行錯誤で体当たりしながら（3）前進する実力派。",
+    "1/4": "【知識と縁の人】 深い知識を積み上げて（1）、信頼できる身近な縁（4）を通じてその力を広げる。",
+    "2/4": "【才能と縁の人】 生まれ持った独自の才能（2）を持ち、信頼できるつながり（4）の中だけで開花させる。",
+    "2/5": "【天才と解決の人】 天性の直感的な力（2）を持ち、外からの助けを求める声（5）に応えて問題を解決する。",
+    "3/5": "【実践と解決の人】 失敗と衝突（3）から実践的な答えを見つけ出し、周囲の困りごとを解決する（5）。",
+    "3/6": "【実践から全体へ移行する人】 前半の人生は試して失敗（3）を繰り返し、後半は全体を高い視座（6）から設計する人へと変わる。",
+    "4/6": "【縁とモデルの人】 人とのつながり（4）を育みながら、高い視点（6）から全体の健康を見守る。",
+    "4/1": "【伝道と知識の人】 深い人脈（4）を土台に、揺るぎない基礎知識（1）を周囲へ伝えていく。",
+    "5/1": "【解決と基礎の人】 確かな知識（1）を土台に、期待に完璧な答えで応える（5）頼られる人。",
+    "5/2": "【解決と才能の人】 普段は目立たない（2）が、いざとなると天才的な一手（5）で問題を解決する職人。",
+    "6/2": "【全体と才能の人】 生まれ持った才能（2）を持ちながら、全体の流れを俯瞰（6）して整える監督役。",
+    "6/3": "【全体と実践の人】 自ら困難に飛び込み（3）ながら、どこか俯瞰した目（6）で限界を見極め続ける探求者。"
+}
+
+TECH_LINE_MEANINGS = {
+    1: "土台づくり・基礎固め", 2: "生まれ持った独自の才能",
+    3: "試して学ぶ・実践型", 4: "人とのつながり・縁",
+    5: "問題を解決する力", 6: "全体を見渡して整える力"
+}
+
 MOTOR_CENTERS = {"生命力", "意志", "感情", "活力"}
-
-swe.set_ephe_path('./ephe_data')
+LOWER_CENTERS = {"自己", "意志", "生命力", "直感", "感情", "活力"}
 
 # =====================================================================
-# ▼▼▼ 5. 計算ロジック ▼▼▼
+# ▼▼▼ 天文暦セットアップ & 計算関数 ▼▼▼
 # =====================================================================
+ephe_dir = './ephe_data'
+os.makedirs(ephe_dir, exist_ok=True)
+for f in ['sepl_18.se1', 'semo_18.se1', 'seas_18.se1']:
+    if not os.path.exists(os.path.join(ephe_dir, f)):
+        urllib.request.urlretrieve('https://github.com/aloistr/swisseph/raw/master/ephe/' + f, os.path.join(ephe_dir, f))
+swe.set_ephe_path(ephe_dir)
+
 def get_gate_and_line(lon):
     offset = (lon - 302.0 + 360.0) % 360.0
     return GATE_SEQUENCE[int(offset / 5.625)], int((offset % 5.625) / (5.625 / 6)) + 1
@@ -170,23 +241,112 @@ def get_chart_data(y, m, d, h, mi):
                 data.append({"planet": "SouthNode", "color": col, "gate": sg, "line": sl})
     return data, jd_d
 
-def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
-    T_TYPE, T_CENTER, T_DEF_CENTER = get_dictionaries(mode)
-    core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
-    
-    # 🌟 修正：まずon/offを判定する（スコア計算の前に必要！）
+def get_defined_centers(test_gates):
     on_c = set()
     for r, cs in CHANNELS.items():
         c1, c2 = r.split('_')
         for g1, g2, cid in cs:
-            if g1 in core_g and g2 in core_g:
+            if g1 in test_gates and g2 in test_gates:
                 on_c.update([c1, c2])
+    return on_c
+
+def get_islands_for_gates(test_gates, defined_centers):
+    adj = collections.defaultdict(list)
+    for r, cs in CHANNELS.items():
+        c1, c2 = r.split('_')
+        for g1, g2, cid in cs:
+            if g1 in test_gates and g2 in test_gates:
+                adj[c1].append(c2)
+                adj[c2].append(c1)
+    isls = []
+    visited = set()
+    for c in defined_centers:
+        if c not in visited:
+            isl = set()
+            q = [c]
+            while q:
+                curr = q.pop(0)
+                if curr not in visited:
+                    visited.add(curr)
+                    isl.add(curr)
+                    q.extend([n for n in adj[curr] if n in defined_centers and n not in visited])
+            isls.append(isl)
+    return isls
+
+def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
+    T_TYPE, T_CENTER, T_DEF_CENTER = get_dictionaries(mode)
+    core_g = set([x["gate"] for x in data if x["planet"] != "Chiron"]) | FORCED_GATES
     
+    initial_on_c = get_defined_centers(core_g)
+    initial_islands = get_islands_for_gates(core_g, initial_on_c)
+    on_c = initial_on_c
+
+    # 🌟 エラー修正箇所：ここでoff_centersを確定させる
     off_centers = set(CENTER_ORDER) - on_c
 
-    # 🌟 スコア計算ロジック（未定義センターの5点消耗対応）
     energized_centers = set(MOTOR_CENTERS)
-    # (中略: エネルギー定義の詳細は維持)
+    if {25, 51}.issubset(core_g) or {5, 15}.issubset(core_g) or {2, 14}.issubset(core_g) or {29, 46}.issubset(core_g) or {34, 10}.issubset(core_g): energized_centers.add("自己")
+    if {18, 58}.issubset(core_g) or {28, 38}.issubset(core_g) or {32, 54}.issubset(core_g) or {34, 57}.issubset(core_g) or {27, 50}.issubset(core_g) or {26, 44}.issubset(core_g): energized_centers.add("直感")
+    if {34, 20}.issubset(core_g) or {12, 22}.issubset(core_g) or {35, 36}.issubset(core_g) or {21, 45}.issubset(core_g): energized_centers.add("表現")
+
+    b_gates_1, b_gates_2 = [], []
+    if len(initial_islands) > 1:
+        for g in range(1, 65):
+            if g not in core_g:
+                test_gates = core_g | {g}
+                test_on_c = get_defined_centers(test_gates)
+                if len(test_on_c) == len(initial_on_c):
+                    test_islands = get_islands_for_gates(test_gates, test_on_c)
+                    if len(test_islands) > 0 and len(test_islands) < len(initial_islands):
+                        b_gates_1.append(g)
+        if not b_gates_1:
+            missing = [g for g in range(1, 65) if g not in core_g]
+            for i in range(len(missing)):
+                for j in range(i + 1, len(missing)):
+                    g1, g2 = missing[i], missing[j]
+                    test_gates = core_g | {g1, g2}
+                    test_on_c = get_defined_centers(test_gates)
+                    if len(test_on_c) == len(initial_on_c):
+                        test_islands = get_islands_for_gates(test_gates, test_on_c)
+                        if len(test_islands) > 0 and len(test_islands) < len(initial_islands):
+                            b_gates_2.append((min(g1, g2), max(g1, g2)))
+
+    is_rare = False
+    if len(initial_islands) == 0: definition_type, is_rare = "全感受型", True
+    elif len(initial_islands) == 1: definition_type = "一体型"
+    elif len(initial_islands) == 2:
+        if len(b_gates_1) > 0: definition_type = "二系統型"
+        else: definition_type, is_rare = "特殊二系統型", True
+    elif len(initial_islands) == 3: definition_type = "三系統型"
+    elif len(initial_islands) == 4: definition_type, is_rare = "四系統型", True
+    else: definition_type = "多系統型"
+
+    motor_to_throat = False
+    connected_motors = set()
+    if "表現" in on_c:
+        adj = collections.defaultdict(list)
+        for r, cs in CHANNELS.items():
+            c1, c2 = r.split('_')
+            for g1, g2, cid in cs:
+                if g1 in core_g and g2 in core_g:
+                    adj[c1].append(c2)
+                    adj[c2].append(c1)
+        v_throat = set()
+        queue = ["表現"]
+        while queue:
+            curr = queue.pop(0)
+            if curr not in v_throat:
+                v_throat.add(curr)
+                if curr in MOTOR_CENTERS:
+                    motor_to_throat = True
+                    connected_motors.add(curr)
+                queue.extend([n for n in adj[curr] if n not in v_throat])
+
+    if "生命力" in on_c: type_str = "表現する生命型" if motor_to_throat else "生命力型"
+    else:
+        if motor_to_throat: type_str = "行動開始型"
+        elif len(on_c) > 0: type_str = "導き型"
+        else: type_str = "反射型"
 
     def calc_gate_score(gate, planet):
         c = next((k for k, v in CENTER_GATES.items() if gate in v), None)
@@ -194,14 +354,15 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
             return (CUSTOM_WEIGHTS.get(planet, 0) / 2.0) * (1.0 if c in on_c else DORMANT_MULTIPLIER)
         return 0.0
 
+    # 🌟 新ロジック：未定義センターの5点消耗対応
     center_scores = {}
     total_score = 0
     for c in CENTER_ORDER:
         c_score = sum(calc_gate_score(x["gate"], x["planet"]) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c])
         c_int = int(round(c_score))
         
-        # 🌟 ここが新ロジック：未定義なら最低5点
         if c in off_centers:
+            # 未定義（白）の場合：ゲートがあってもなくても、最低「5ポイント」の消耗値を持たせる
             c_int = max(c_int, 5)
         elif c_score > 0 and c_int == 0:
             c_int = 1
@@ -209,19 +370,101 @@ def generate_report_data(data, jd_d, y, m, d, h, mi, mode):
         center_scores[c] = c_int
         total_score += c_int
 
-    # (中略: 表示用HTMLの生成などは維持)
+    full_open = [c for c in off_centers if len(CENTER_GATES[c] & set(core_g)) == 0]
+
+    red_counts, black_counts = {i: 0 for i in range(1, 7)}, {i: 0 for i in range(1, 7)}
+    for d_item in data:
+        if d_item["planet"] != "Chiron":
+            if d_item["color"] == "Red": red_counts[d_item["line"]] += 1
+            else: black_counts[d_item["line"]] += 1
+
+    p_sun = next(d_item for d_item in data if d_item["planet"] == "Sun" and d_item["color"] == "Black")
+    p_earth = next(d_item for d_item in data if d_item["planet"] == "Earth" and d_item["color"] == "Black")
+    d_sun = next(d_item for d_item in data if d_item["planet"] == "Sun" and d_item["color"] == "Red")
+    d_earth = next(d_item for d_item in data if d_item["planet"] == "Earth" and d_item["color"] == "Red")
+    profile = f"{p_sun['line']}/{d_sun['line']}"
+
     dv = swe.revjul(jd_d)
     dj = datetime.datetime(int(dv[0]), int(dv[1]), int(dv[2]), int(dv[3]), int((dv[3] % 1) * 60)) + datetime.timedelta(hours=9)
-    spec_html = f"体質タイプ: 解析中"
-    expert_html = f"詳細データ"
+
+    spec_f = io.StringIO()
+    with contextlib.redirect_stdout(spec_f):
+        print(f"意識　（後天）　： {y}/{m:02d}/{d:02d} {h:02d}:{mi:02d}\n")
+        print(f"<span class='unconscious-red'>無意識（先天）　： {dj.strftime('%Y/%m/%d %H:%M')}</span>\n")
+        if is_rare: print(f"<div class='rare-alert'>★ 【特殊な特徴を検出】<br>詳細はぜひ鑑定士にお問合せください！</div>\n")
+        print(DIVIDER)
+        print("**👶 あなたの基本体質と役割**")
+        print(DIVIDER)
+        print(f"\n【生まれつきの性質】: {type_str}\n")
+        print(f"\n └ 特徴: {T_TYPE.get(type_str, '解析中')}\n")
+        print(f"\n【人生の役割】: {profile}\n")
+        print(f"\n └ 特性: {PROFILE_TECH_MEANINGS.get(profile, '')}\n")
+
+    exp_f = io.StringIO()
+    with contextlib.redirect_stdout(exp_f):
+        print(f"【生まれた意味・役割】\n")
+        print(f"\n └ 先天(無意識): 太陽 {d_sun['gate']:>2} / 地球 {d_earth['gate']:>2}\n")
+        print(f"\n └ 後天(意　識): 太陽 {p_sun['gate']:>2} / 地球 {p_earth['gate']:>2}\n")
+        print(f"\n【心身の統合状態 (定義型)】: {definition_type}\n")
+        
+        if "特殊二系統型" in definition_type:
+            print("\n └ 特徴: 島が遠く離れており、1つの扉では繋がりません。他者との関わりを通じて時間をかけて全体を統合していく体質です。\n")
+        
+        if len(initial_islands) <= 1:
+            print("🌟 欠けている扉（橋渡しの役割）: なし（既に全体が繋がっています）\n")
+        else:
+            if b_gates_1:
+                print(f"🌟 欠けている扉（島を繋ぐ橋渡しの役割）:\n")
+                for bg in sorted(list(set(b_gates_1))):
+                    mean_str = GATE_TECH_MEANINGS.get(bg, "")
+                    print(f"  └ 扉 {bg:>2}: {mean_str}\n")
+            elif b_gates_2:
+                print(f"🌟 広域の欠けている扉（2つの扉で繋がる）:\n")
+                for bg1, bg2 in b_gates_2:
+                    print(f"  └ [扉 {bg1} & 扉 {bg2}]\n")
+
+        print("\n" + DIVIDER)
+        print("**🔭 天体と扉の対応表**")
+        print(DIVIDER)
+        for p in PLANET_ORDER:
+            r = next((x for x in data if x["planet"] == p and x["color"] == "Red"), None)
+            b = next((x for x in data if x["planet"] == p and x["color"] == "Black"), None)
+            if r and b:
+                rs = calc_gate_score(r["gate"], p) if p != "Chiron" else 0.0
+                bs = calc_gate_score(b["gate"], p) if p != "Chiron" else 0.0
+                r_sc = f" [{rs:>4.1f}]" if rs > 0 else "       "
+                b_sc = f" [{bs:>4.1f}]" if bs > 0 else "       "
+                print(f"{PLANET_JP.get(p, p)}")
+                print(f"<span class='unconscious-red'>先天 {r['gate']:02d}.{r['line']}{r_sc}</span> ║ 後天 {b['gate']:02d}.{b['line']}{b_sc}\n")
+
+        print("\n" + DIVIDER)
+        print("**🚪 身体の働き（中枢）ごとの扉の詳細一覧**")
+        print(DIVIDER)
+        for c in CENTER_ORDER:
+            c_gates = [(x["gate"], x["line"], x["planet"], x["color"], calc_gate_score(x["gate"], x["planet"])) for x in data if x["planet"] != "Chiron" and x["gate"] in CENTER_GATES[c]]
+            if c_gates:
+                print(f"\n■ **{c}**\n")
+                for g, line, p, col, s in sorted(c_gates, key=lambda x: x[0]):
+                    score_str = f" [{s:>4.1f}]" if s > 0 else ""
+                    mean_str = GATE_TECH_MEANINGS.get(g, "")
+                    if col == "Red": print(f"\nー <span class='unconscious-red'>扉 {g:>2} {mean_str} ({PLANET_JP.get(p, p)}/先天){score_str}</span>")
+                    else: print(f"\nー 扉 {g:>2} {mean_str} ({PLANET_JP.get(p, p)}/後天){score_str}")
+
+        print("\n" + DIVIDER)
+        print("**📊 段階別の構成（1〜6のテーマ）**")
+        print(DIVIDER)
+        print("<b>段階 ║ <span class='unconscious-red'>先天</span> ║ 後天 ║ 合計 ║ 特性</b>\n")
+        for i in range(1, 7):
+            tot = red_counts[i] + black_counts[i]
+            print(f" {i}段階 ║ <span class='unconscious-red'>{red_counts[i]:>2}</span> │ {black_counts[i]:>2} ║ {tot:>2} ║ {TECH_LINE_MEANINGS[i]}\n")
 
     return {
-        "total_score": total_score, "center_scores": center_scores, "off_centers": off_centers,
-        "on_c": on_c, "T_CENTER": T_CENTER, "T_DEF_CENTER": T_DEF_CENTER, "html_spec": spec_html, "html_expert": expert_html
+        "total_score": total_score, "center_scores": center_scores, "off_centers": off_centers, "full_open": full_open,
+        "on_c": on_c, "T_CENTER": T_CENTER, "T_DEF_CENTER": T_DEF_CENTER, "html_spec": spec_f.getvalue(), "html_expert": exp_f.getvalue()
     }
 
 # =====================================================================
-# ▼▼▼ 6. UI描画 ▼▼▼
+# ▼▼▼ 6. 実行ボタンとUIの描画 ▼▼▼
 # =====================================================================
 if st.sidebar.button("🌿 体質診断を開始する", on_click=reset_state):
     with st.spinner("診断中..."):
@@ -230,22 +473,85 @@ if st.sidebar.button("🌿 体質診断を開始する", on_click=reset_state):
         st.session_state['current_mode'] = display_mode
 
 if 'report_data' in st.session_state:
+    if st.session_state.get('current_mode') != display_mode:
+        with st.spinner("モード切替中..."):
+            c_data, jd_d = get_chart_data(YEAR, MONTH, DAY, HOUR, MINUTE)
+            st.session_state['report_data'] = generate_report_data(c_data, jd_d, YEAR, MONTH, DAY, HOUR, MINUTE, display_mode)
+            st.session_state['current_mode'] = display_mode
+
     rd = st.session_state['report_data']
     mode = st.session_state['current_mode']
+    
+    st.info(f"現在の翻訳モード: **{mode}**")
+    
+    if "ビジネス" in mode:
+        title = "🚨 組織と個人のリソースロス診断"
+        desc = "現在の課題（エラー）にチェックを入れてください。リアルタイムのリソース状態が一番下で可視化されます。"
+        top_m_title = "本来の「持って生まれた器」（MAX状態）"
+        bottom_m_title = "現在の「稼働リソース」（リアルタイム）"
+    elif "中高生" in mode:
+        title = "🚨 青春のモヤモヤ診断"
+        desc = "日常の「あるある」にチェックを入れてね。いまの自分らしさのパーセンテージが一番下でわかるよ。"
+        top_m_title = "本来の「持って生まれた器」（最強の自分）"
+        bottom_m_title = "いま出せてる「自分らしさ」（リアルタイム）"
+    else:
+        title = "🚨 心身の滞り（ブロック）診断"
+        desc = "日常の「思い込み」にチェックを入れてください。活力の滞りが一番下で視覚化されます。"
+        top_m_title = "本来の「持って生まれた器」（MAX状態）"
+        bottom_m_title = "現在の「気の巡り・活力」（リアルタイム）"
+
     deducted = sum(rd['center_scores'][c] for c in CENTER_ORDER if st.session_state.get(f"chk_{c}", False))
     current_score = max(0, rd['total_score'] - deducted)
 
-    st.markdown(f"### 🔋 本来の器: {rd['total_score']}")
-    st.markdown(f"### 📉 現在の活力: {current_score}")
+    # 🌟 トップメーター
+    st.markdown(f"### 🔋 {top_m_title}: {rd['total_score']} / {rd['total_score']}")
+    blocks_html_top = f"<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
+    for i in range(rd['total_score']):
+        blocks_html_top += f"<div style='width: 14px; height: 14px; background-color: #00BFFF; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
+    st.markdown(blocks_html_top + "</div>", unsafe_allow_html=True)
+
+    st.markdown(f"<div class='card'>\n{rd['html_spec']}\n</div>", unsafe_allow_html=True)
+
+    # 🚨 診断セクション
+    st.markdown(f"### {title}")
+    st.info(desc)
     
     for c in CENTER_ORDER:
-        st.markdown(f"#### ■ {c}")
-        t_data = rd['T_CENTER'][c] if c in rd['off_centers'] else rd['T_DEF_CENTER'][c]
-        st.markdown(f"**{t_data['curse']}**")
-        st.checkbox(f"👆 最近、この状態に当てはまる (-{rd['center_scores'][c]} 消耗)", key=f"chk_{c}")
-        st.divider()
+        with st.container():
+            st.markdown(f"#### ■ **{c}**")
+            t_data = rd['T_CENTER'][c] if c in rd['off_centers'] else rd['T_DEF_CENTER'][c]
+            
+            st.markdown(f"**{t_data['curse']}**")
+            
+            pts = rd['center_scores'][c]
+            chk_lbl = f"👆 最近、この状態に当てはまる"
+            lbl = f"{chk_lbl} (-{pts} 消耗)" if pts > 0 else chk_lbl
+            st.checkbox(lbl, key=f"chk_{c}")
+            
+            st.markdown(f"*{t_data['truth']}*\n\n`{t_data['solution']}`")
+            st.divider()
 
-    with st.expander("▼ 🔒 専門データ"):
-        secret_code = st.text_input("パスコード:", type="password")
+    st.markdown("---")
+    st.markdown(f"### 📉 {bottom_m_title}: {current_score} / {rd['total_score']}")
+    
+    if deducted > 0:
+        st.warning(f"⚠️ 滞り（ブロック）の影響で、本来の器から **{deducted} ポイント** の活力が消耗（マイナス）しています。")
+    else:
+        st.success("✨ 素晴らしい！本来の器の活力を100%発揮できています！")
+
+    blocks_html_bottom = f"<div style='width: 80%; display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; padding: 10px; background: #f8f9fa; border-radius: 8px;'>"
+    for i in range(rd['total_score']):
+        bg = "#E53935" if i < current_score else "#CFD8DC"
+        blocks_html_bottom += f"<div style='width: 14px; height: 14px; background-color: {bg}; border-radius: 2px; box-shadow: 1px 1px 2px rgba(0,0,0,0.1);'></div>"
+    st.markdown(blocks_html_bottom + "</div>", unsafe_allow_html=True)
+
+    # 🌟 鍵付きVIP専用エリア
+    with st.expander("▼ 🔒【鑑定士向け詳細データ】扉・段階・天体の詳細（※要パスコード）"):
+        st.info("💡 ここから先は鑑定士（専門家）向けの命式データエリアです。")
+        secret_code = st.text_input("公式LINEで配布している『秘密の合言葉（パスコード）』を入力してください：", type="password")
+        
         if secret_code == "2026":
-            st.write("認証成功")
+            st.success("認証成功！詳細データを展開します。")
+            st.markdown(f"<div class='card' style='background-color:#f8f9fa;'>\n{rd['html_expert']}\n</div>", unsafe_allow_html=True)
+        elif secret_code != "":
+            st.error("合言葉が間違っています。")
